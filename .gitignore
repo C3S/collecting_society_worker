@@ -1,0 +1,31 @@
+# ini files
+*.ini
+
+# swap files
+*~
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+
+# Distribution / packaging
+.Python
+env/
+tmp/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Visual Studio Code settings (though launch.json could be useful 
+#    to add '"args": ["get-jobs"],' to the Python config)
+.vscode/

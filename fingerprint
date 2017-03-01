@@ -1,0 +1,98 @@
+#!env/bin/python
+# For copyright and license terms, see COPYRIGHT.rst (top level of repository)
+# Repository: ...
+
+"""
+The one and only C3S fingerprinting utility
+"""
+
+import sys
+import os
+import subprocess
+import ConfigParser
+import click
+from proteus import config, Model
+
+
+# read config from .ini
+CONFIGURATION = ConfigParser.ConfigParser()
+CONFIGURATION.read("config.ini")
+PROTEUS_CONFIG = dict(CONFIGURATION.items('proteus'))
+FILEHANDLING_CONFIG = dict(CONFIGURATION.items('filehandling'))
+
+#  get access to database
+config.set_xmlrpc(
+    "https://"   + PROTEUS_CONFIG['user'] + ":" + PROTEUS_CONFIG['password'] + "@"
+    + PROTEUS_CONFIG['host'] + ":" + PROTEUS_CONFIG['port'] + "/" + PROTEUS_CONFIG['database']
+)
+
+def process_audiofile(filepath):
+    """
+    Audiofingerprinting a single file along with metadata lookup.
+    """
+
+    print '-' * 80
+    print "processing file " + filepath
+    proc = subprocess.Popen(["../echoprint-codegen/echoprint-codegen", filepath],
+                            stdout=subprocess.PIPE)
+    json_meta_fp = proc.communicate()[0]
+    fpcode_pos = json_meta_fp.find('"code":')
+    if fpcode_pos > 0:
+        print json_meta_fp[:fpcode_pos+40] + "....." + json_meta_fp[-40:]
+    else:
+        print json_meta_fp
+
+@click.group()
+def fingerprint():
+    """
+    Command line tool to print fingers.
+    """
+
+@fingerprint.command('get-jobs')
+#@click.argument('content')
+#@click.argument('path')
+#@click.argument('archive')
+#@click.argument('mimetype')
+#@click.argument('extension')
+#@click.pass_context
+# content, path, archive, mimetype, extension
+def get_jobs():
+    """
+    Get Jobs
+    """
+
+    #webuser = Model.get('web.user')
+    #for web_user in webuser.find(['email', "=", "meik@c3s.cc"]):
+    #    print web_user.nickname
+
+    startpath = FILEHANDLING_CONFIG['complete_path']
+    for root, _, files in os.walk(startpath):
+        level = root.replace(startpath, '').count(os.sep)
+        if level == 1:
+            for audiofile in files:
+                if audiofile is not "archive.info":
+                    fpath = root + os.sep + audiofile
+                    process_audiofile(fpath)
+
+@fingerprint.command('match')
+#@click.argument('code')
+#@click.pass_context
+def match(): # code
+    """
+    match fingerprint, get the identifier from the echoprint server
+    """
+
+    # for testing, match first fingerprint code in creation.utilisation.imp
+    #code = ""
+
+    utilizations = Model.get('creation.utilisation.imp')
+    result = utilizations.find(['title', "=", "999,999"])
+    if not result:
+        sys.exit()
+    #code = result.fingerprint
+
+    print result[0].fingerprint
+
+
+if __name__ == '__main__':
+    fingerprint()

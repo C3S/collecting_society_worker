@@ -1,0 +1,111 @@
+# For copyright and license terms, see COPYRIGHT.rst (top level of repository)
+# Repository: https://github.com/C3S/collecting_society.portal
+
+###
+# app configuration
+# http://docs.pylonsproject.org/projects/pyramid/en/1.5-branch/narr/environment.html
+###
+
+[app:main]
+
+# environment
+use = egg:c3s_collecting_society_portal
+env = production
+service = ${PYRAMID_SERVICE}
+
+# debug
+debugtoolbar.enabled = false
+debugtoolbar.hosts = 0.0.0.0/0
+
+# pyramid
+pyramid.reload_templates = false
+pyramid.reload_assets = false
+pyramid.debug_authorization = false
+pyramid.debug_authentication = false
+pyramid.debug_templates = false
+pyramid.debug_notfound = false
+pyramid.default_locale_name = en
+pyramid.includes =
+    pyramid_beaker
+    pyramid_chameleon
+    pyramid_mailer
+
+# tryton
+tryton.database = c3s
+tryton.company = 1
+tryton.user = 0
+tryton.configfile = /ado/etc/trytond.conf
+
+# session
+session.type = memory
+session.secret = ${PORTAL_SESSION_SECRET}
+session.cookie_on_exception = true
+
+# authentication
+authentication.secret = ${PORTAL_AUTHENTICATION_SECRET}
+
+# app
+app.languages = en de es
+
+# plugins
+plugins.pattern = collecting_society_portal_
+
+# api
+api.in_web = false
+api.in_web_path = /api
+
+
+###
+# wsgi server configuration
+###
+
+[server:main]
+use = egg:waitress#main
+host = 0.0.0.0
+port = 6543
+#url_scheme = https
+trusted_proxy = %(trusted_proxy)s
+
+
+###
+# logging configuration
+# http://docs.pylonsproject.org/projects/pyramid/en/1.5-branch/narr/logging.html
+###
+
+[loggers]
+keys = root, collecting_society_portal
+
+[handlers]
+keys = console
+
+[formatters]
+keys = generic, fullname, funcname, plain
+
+[logger_root]
+level = WARN
+handlers = console
+
+[logger_collecting_society_portal]
+level = WARN
+handlers =
+qualname = collecting_society_portal
+
+[handler_console]
+class = StreamHandler
+args = (sys.stderr,)
+level = NOTSET
+formatter = generic
+
+[formatter_generic]
+format = %(asctime)s %(levelname)-5.5s [%(name)s %(funcName)s] %(message)s
+
+[formatter_fullname]
+format =
+    --- %(levelname)s | %(name)s | %(funcName)s() ---------------------------------
+    %(message)s
+
+[formatter_funcname]
+format = %(levelname)s [%(funcName)s()]  %(message)s
+
+[formatter_plain]
+format = %(message)s

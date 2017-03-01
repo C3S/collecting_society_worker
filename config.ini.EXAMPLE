@@ -1,0 +1,10 @@
+[proteus]
+host     = localhost
+port     = 8069
+database = c3s
+user     = admin
+password = admin 
+
+[filehandling]
+complete_path=tmp/upload/complete
+for_archiving_path=tmp/for_archiving
