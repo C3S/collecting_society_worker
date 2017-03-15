@@ -8,3 +8,4 @@ password = admin
 [filehandling]
 complete_path=tmp/upload/complete
 for_archiving_path=tmp/for_archiving
+echoprint_server_token=my_secr3t_t0ken_for_the_echopr1nt_server

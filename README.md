@@ -10,19 +10,19 @@ The project is in an early stage. This is the current implementation status:
 
 * get-jobs
     * implemented:
-        1) looks for files in `complete_path` (see config.ini)
-        2) uses *echoprint-codegen* to get a raw json with an audiofingerprint
+        1. looks for files in `complete_path` (see config.ini)
+        2. uses *echoprint-codegen* to get a raw json with an audiofingerprint
     * not yet implemented:
-        1) fills in metadata that is missing in the json from the `content` 
+        1. fills in metadata that is missing in the json from the `content` 
         and `creation` tables via *proteus*
-        2) sets the status in the `creation` tables to *fingerprinted*
-        3) uploads ('ingests') the jsons including the fingerprints to our 
+        2. sets the status in the `creation` tables to *fingerprinted*
+        3. uploads ('ingests') the jsons including the fingerprints to our 
         EchoPrint server
-        4) moves the processed files from the `complete_path` to the 
+        4. moves the processed files from the `complete_path` to the 
         `for_archiving_path` folder
-        5) tracks if files have been moved to all necessary offline archives 
+        5. tracks if files have been moved to all necessary offline archives 
         and deletes those files
-        6) sets the status in the `creation` tables to *archived*
+        6. sets the status in the `creation` tables to *archived*
 
 * match
     --> todo
@@ -41,7 +41,7 @@ Getting Started
 * env/bin/python setup.py develop # only once
 * build an EchoPrint fingerprinter binary in ../echoprint-codegen/echoprint-codegen
 * get ffmpeg (recommended: download static build to /usr/bin)
-* get some 'complete' sample data from the c3s.ado.repertoire/etc/tmp after 
-  uploading some audio files
+* setup & run c3s.ado.repertoire and get some 'complete' sample data from 
+  ado/etc/tmp after uploading some audio files
 * chown a+x fingerprint
 * ./fingerprint get-jobs
