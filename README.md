@@ -12,17 +12,17 @@ The project is in an early stage. This is the current implementation status:
     * implemented:
         1. looks for files in `complete_path` (see config.ini)
         2. uses *echoprint-codegen* to get a raw json with an audiofingerprint
-    * not yet implemented:
-        1. fills in metadata that is missing in the json from the `content` 
+        3. fills in metadata that is missing in the json from the `content` 
         and `creation` tables via *proteus*
-        2. sets the status in the `creation` tables to *fingerprinted*
-        3. uploads ('ingests') the jsons including the fingerprints to our 
+        4. sets the status in the `creation` tables to *fingerprinted*
+        5. uploads ('ingests') the jsons including the fingerprints to our 
         EchoPrint server
-        4. moves the processed files from the `complete_path` to the 
+    * not yet implemented:
+        1. moves the processed files from the `complete_path` to the 
         `for_archiving_path` folder
-        5. tracks if files have been moved to all necessary offline archives 
+        2. tracks if files have been moved to all necessary offline archives 
         and deletes those files
-        6. sets the status in the `creation` tables to *archived*
+        3. sets the status in the `creation` tables to *archived*
 
 * match
     --> todo

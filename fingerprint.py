@@ -67,7 +67,7 @@ def process_audiofile(path, filename):
             meta_fp = json.loads(json_meta_fp)
 
             # save fingerprint to echoprint server
-            data = {'track_id': 'C3S' + str(matching_content.id).zfill(10),
+            data = {'track_id': matching_creation.code,
                     'token' : FILEHANDLING_CONFIG['echoprint_server_token'],
                     'fp': meta_fp[0]['code'],
                     'artist' : matching_creation.artist.name,
@@ -96,18 +96,23 @@ def process_audiofile(path, filename):
                               if len(ingest_request.text) > 2000 else ingest_request.text)
 
             # TO DO: update content processing state
-            #matching_content.processing_state = 'echoprinted'
-            #matching_content.save()
+            matching_content.processing_state = 'fingerprinted'
+            matching_content.save()
 
             # TO DO: how the heck do I tell tryton who is the user??
-            #new_logentry = matching_content.fingerprintlogs.new()
-            #user = Model.get('res.user')
-            #for matching_user in creation.find(['id', "=", PROTEUS_CONFIG['user']]):
-            #new_logentry.user = user.id
-            #new_logentry.timestamp = datetime.datetime.now()
-            #new_logentry.algorithm = 'EchoPrint'
-            #new_logentry.version = str(meta_fp[0]['metadata']['version'])
-            #new_logentry.save()
+            Fingerprintlog = Model.get('content.fingerprintlog')
+            new_logentry = Fingerprintlog()
+            user = Model.get('res.user')
+            matching_users = user.find(['login', '=', 'admin'])
+            if not matching_users:
+                return
+
+            new_logentry.user = matching_users[0]
+            new_logentry.content = matching_content
+            new_logentry.timestamp = datetime.datetime.now()
+            new_logentry.fingerprinting_algorithm = 'EchoPrint'
+            new_logentry.fingerprinting_version = str(meta_fp[0]['metadata']['version'])
+            new_logentry.save()
 
             # TO DO: move file from complete folder to fingerprinted folder
 
