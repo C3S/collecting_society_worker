@@ -3,18 +3,28 @@
 # Repository: ...
 
 """
-The one and only C3S fingerprinting utility
+The one and only C3S repertoire processing utility
 """
+
+
+#--- Imports ---
+
 
 import sys
 import os
+import shutil
 import subprocess
 import ConfigParser
 import json
 import datetime
+import re
+import hashlib
 import click
 import requests
 from proteus import config, Model
+
+
+#--- Initialization ---
 
 
 # read config from .ini
@@ -29,12 +39,54 @@ config.set_xmlrpc(
     + PROTEUS_CONFIG['host'] + ":" + PROTEUS_CONFIG['port'] + "/" + PROTEUS_CONFIG['database']
 )
 
-def process_audiofile(path, filename):
+
+#--- Processing stage functions for single audiofiles ---
+
+
+def checksum_audiofile(srcdir, destdir, filename):
     """
-    Audiofingerprinting a single file along with metadata lookup.
+    Hashing a single file.
     """
 
-    filepath = path + os.sep + filename
+    filepath = srcdir + os.sep + filename
+
+    bufsize = 65536
+
+    sha256 = hashlib.sha256()
+
+    with open(filepath, 'rb') as filetohash:
+        while True:
+            data = filetohash.read(bufsize)
+            if not data:
+                break
+            sha256.update(data)
+
+    print "SHA256 of file {0}: {1}".format(filename, sha256.hexdigest())
+
+    # find content in database from filename
+    content = Model.get('content')
+    for matching_content in content.find(['uuid', "=", filename]):
+
+        # move file to checksummed directory
+        if move_file(filepath, destdir + os.sep + filename) is False:
+            print "ERROR: '" + filename + "' couldn't be moved to '" + destdir +"'."
+            return
+
+        # TO DO: save sha256 to database
+
+        # update content processing state
+        matching_content.processing_state = 'checksummed'
+        matching_content.save()
+
+
+def fingerprint_audiofile(srcdir, destdir, filename):
+    """
+    Audiofingerprint a single file.
+
+    Along with metadata lookup and store it on the EchoPrint server
+    """
+
+    filepath = srcdir + os.sep + filename
 
     # get track_id and metadata from web service
     content = Model.get('content')
@@ -95,11 +147,11 @@ def process_audiofile(path, filename):
             print "Body: " + (ingest_request.text[:500] + '...' + ingest_request.text[-1500:]
                               if len(ingest_request.text) > 2000 else ingest_request.text)
 
-            # TO DO: update content processing state
+            # update content processing state
             matching_content.processing_state = 'fingerprinted'
             matching_content.save()
 
-            # TO DO: how the heck do I tell tryton who is the user??
+            # TO DO: user access control
             Fingerprintlog = Model.get('content.fingerprintlog')
             new_logentry = Fingerprintlog()
             user = Model.get('res.user')
@@ -114,37 +166,109 @@ def process_audiofile(path, filename):
             new_logentry.fingerprinting_version = str(meta_fp[0]['metadata']['version'])
             new_logentry.save()
 
-            # TO DO: move file from complete folder to fingerprinted folder
+            # move file to fingerprinted directory
+            if move_file(filepath, destdir + os.sep + filename) is False:
+                print "ERROR: '" + filename + "' couldn't be moved to '" + destdir +"'."
+                return
 
             break
         break
 
-@click.group()
-def fingerprint():
+
+#--- Helper functions ---
+
+# notiz für mich: von Content aus betrachtet: content.creation.licenses[n].name
+
+def directory_walker(processing_step_func, args):
     """
-    Command line tool to print fingers.
+    Walks through the specified directory tree.
+
+    Applies the specified repertoire processing step for each file.
+
+    Example: directory_walker(fingerprint_audiofile, (sourcedir, destdir))
     """
 
-@fingerprint.command('get-jobs')
-#@click.pass_context
-def get_jobs():
-    """
-    Get Jobs
-    """
+    startpath = args[0]
+    destdir = args[1]
+    if ensure_path_exists(destdir) is None:
+        print "ERROR: '" + destdir + "' couldn't be created."
+        return
 
-    #webuser = Model.get('web.user')
-    #for web_user in webuser.find(['email', "=", "meik@c3s.cc"]):
-    #    print web_user.nickname
-
-    startpath = FILEHANDLING_CONFIG['complete_path']
+    uuid4rule = '^[0-9A-F]{8}-[0-9A-F]{4}-[4][0-9A-F]{3}-[89AB][0-9A-F]{3}-[0-9A-F]{12}$'
+    uuid4hex = re.compile(uuid4rule, re.I)
     for root, _, files in os.walk(startpath):
         level = root.replace(startpath, '').count(os.sep)
         if level == 1:
             for audiofile in files:
-                if audiofile is not "archive.info":
-                    process_audiofile(root, audiofile)
+                if uuid4hex.match(audiofile) is not None: # only uuid4 compilant filenames
+                    destsubdir = root.replace(args[0], destdir)
+                    if ensure_path_exists(destsubdir) is None:  # ensure user subfolder exists
+                        print "ERROR: '" + destdir + "' couldn't be created."
+                        continue
+                    processing_step_func(root, destsubdir, audiofile)
 
-@fingerprint.command('match')
+
+def move_file(source, target):
+    """
+    Moves a file from one path to another.
+    """
+
+    # check file
+    if not os.path.isfile(source):
+        return False
+    if os.path.isfile(target):
+        return False
+    # move file
+    try:
+        shutil.copyfile(source, target)
+        shutil.copyfile(source + ".checksums", target + ".checksums")
+        os.remove(source)
+        os.remove(source + ".checksums")
+    except IOError:
+        pass
+    return (os.path.isfile(target) and not os.path.isfile(source))
+
+
+def ensure_path_exists(path):
+    if not os.path.exists(path):
+        try:
+            os.makedirs(path)
+        except IOError:
+            pass
+    return os.path.exists(path)
+
+
+#--- Click Commands ---
+
+
+@click.group()
+def repro():
+    """
+    Repertoire Processor command line tool.
+    """
+
+
+@repro.command('checksum')
+#@click.pass_context
+def checksum():
+    """
+    Get files from previewed_path and hash them.
+    """
+    directory_walker(checksum_audiofile, (FILEHANDLING_CONFIG['previewed_path'],
+                                          FILEHANDLING_CONFIG['checksummed_path']))
+
+
+@repro.command('fingerprint')
+#@click.pass_context
+def fingerprint():
+    """
+    Get files from checksummed_path and fingerprint them.
+    """
+    directory_walker(fingerprint_audiofile, (FILEHANDLING_CONFIG['checksummed_path'],
+                                             FILEHANDLING_CONFIG['fingerprinted_path']))
+
+
+@repro.command('match')
 #@click.argument('code')
 #@click.pass_context
 def match(): # code
@@ -165,4 +289,4 @@ def match(): # code
 
 
 if __name__ == '__main__':
-    fingerprint()
+    repro()

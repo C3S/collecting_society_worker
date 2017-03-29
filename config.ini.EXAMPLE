@@ -6,6 +6,10 @@ user     = admin
 password = admin 
 
 [filehandling]
-complete_path=tmp/upload/complete
-for_archiving_path=tmp/for_archiving
+uploaded_path=tmp/uploaded
+rejected_path=tmp/rejected
+previewed_path=tmp/previewed
+checksummed_path=tmp/checksummed
+fingerprinted_path=tmp/fingerprinted
+dropped_path=tmp/dropped
 echoprint_server_token=my_secr3t_t0ken_for_the_echopr1nt_server
