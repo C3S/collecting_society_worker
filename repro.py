@@ -12,6 +12,7 @@ The one and only C3S repertoire processing utility
 
 import sys
 import os
+import fcntl
 # import shutil
 import subprocess
 import ConfigParser
@@ -100,9 +101,9 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     if matching_creation is None:
         return
 
-    if matching_creation.artist.name == '' or matching_creation.title == '':
-        print "--> postponed till metadata is available"
-        return
+    #if matching_creation.artist.name == '' or matching_creation.title == '':
+    #    print "--> postponed till metadata is available"
+    #    return
 
     if len(matching_creation.releases) == 0:
         release = ''
@@ -193,7 +194,7 @@ def get_content_by_filename(filename):
     """
     content = Model.get('content')
     matching_contents = content.find(['uuid', "=", filename])
-    if matching_contents is None:
+    if len(matching_contents) == 0:
         print "ERROR: Wasn't able to find content entry in the database for '" + filename + "'."
         return None
     if len(matching_contents) > 1: # unlikely with uuids, but we are supersticious...
@@ -208,7 +209,7 @@ def get_creation_by_content(content):
     """
     creation = Model.get('creation')
     matching_creations = creation.find(['id', "=", content.id])
-    if matching_creations is None:
+    if len(matching_contents) == 0:
         print "ERROR: Wasn't able to find creation entry in the database with id '" + content.id + \
               "' for file '" + content.uuid + "'."
         return None
@@ -244,7 +245,22 @@ def directory_walker(processing_step_func, args):
                     if ensure_path_exists(destsubdir) is None:  # ensure user subfolder exists
                         print "ERROR: '" + destdir + "' couldn't be created."
                         continue
-                    processing_step_func(root, destsubdir, audiofile)
+
+                    # lock file
+                    try:
+                        lockfilename = os.path.join(root, audiofile)+'.lock'
+                        lockfile = open(lockfilename, 'w+')
+                        fcntl.flock(lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
+
+                        # process file
+                        processing_step_func(root, destsubdir, audiofile)
+
+                        # unlock file
+                        fcntl.flock(lockfile, fcntl.LOCK_UN)
+                        lockfile.close()
+                        os.remove(lockfilename)
+                    except IOError:
+                        pass
 
 
 def move_file(source, target):
