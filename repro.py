@@ -56,6 +56,8 @@ CONFIGURATION.read("config.ini")
 PROTEUS_CONFIG = dict(CONFIGURATION.items('proteus'))
 FILEHANDLING_CONFIG = dict(CONFIGURATION.items('filehandling'))
 HOSTNAME = socket.gethostname()
+STORAGE_BASE_PATH = FILEHANDLING_CONFIG['storage_base_path']
+
 
 #  get access to database
 config.set_xmlrpc(
@@ -73,6 +75,11 @@ def preview_audiofile(srcdir, destdir, filename):
     """
 
     # make sure peviews and excerpts path exist
+    content_base_path = FILEHANDLING_CONFIG['content_base_path']
+    if ensure_path_exists(content_base_path) is None:
+        print "ERROR: '" + content_base_path + "' couldn't be created as content base path."
+        return
+
     previews_path = FILEHANDLING_CONFIG['previews_path']
     if ensure_path_exists(previews_path) is None:
         print "ERROR: '" + previews_path + "' couldn't be created for previews."
@@ -84,8 +91,10 @@ def preview_audiofile(srcdir, destdir, filename):
 
     # create paths with filenames
     filepath = os.path.join(srcdir, filename)
-    previews_filepath = os.path.join(previews_path, filename)
-    excerpts_filepath = os.path.join(excerpts_path, filename)
+    previews_filepath_relative = os.path.join(previews_path, filename)
+    excerpts_filepath_relative = os.path.join(excerpts_path, filename)
+    previews_filepath = os.path.join(content_base_path, previews_filepath_relative)
+    excerpts_filepath = os.path.join(content_base_path, excerpts_filepath_relative)
 
     # create preview
     audio = AudioSegment.from_file(filepath)
@@ -94,8 +103,7 @@ def preview_audiofile(srcdir, destdir, filename):
         print "ERROR: '" + filename + "' couldn't be previewed."
         return
 
-    # create excerpts
-    audio = AudioSegment.from_file(filepath)
+    # create excerpt
     result = create_excerpt(audio, excerpts_filepath)
     if not result:
         print "ERROR: No excerpt could be cut out of '" + filename + "'."
@@ -104,20 +112,27 @@ def preview_audiofile(srcdir, destdir, filename):
     # find content in database from filename
     matching_content = get_content_by_filename(filename)
     if matching_content is None:
+        print "ERROR: Couldn't find content entry for '" + filename + "' in database."
         return
 
-    # move file to checksummed directory
-    if move_file(filepath, destdir + os.sep + filename) is False:
-        print "ERROR: '" + filename + "' couldn't be moved to '" + destdir +"'."
-        return
-
-    # check and update content processing status
+    # check and update content processing status, save some pydub metadata to database
     if matching_content.processing_state != 'uploaded':
         print "WARNING: File '" + filename + "' in the uploaded folder had status '" + \
                 matching_content.processing_state +"'."
     matching_content.processing_state = 'previewed'
     matching_content.processing_hostname = HOSTNAME
+    matching_content.path = filepath.replace(STORAGE_BASE_PATH + os.sep, '') # relative path
+    matching_content.preview_path = previews_filepath_relative
+    matching_content.length = int(audio.duration_seconds)
+    matching_content.channels = int(audio.channels)
+    matching_content.sample_rate = int(audio.frame_rate)
+    matching_content.sample_width = int(audio.sample_width * 8)
     matching_content.save()
+
+    # move file to checksummed directory
+    if move_file(filepath, destdir + os.sep + filename) is False:
+        print "ERROR: '" + filename + "' couldn't be moved to '" + destdir +"'."
+        return
 
 def get_segments(audio):
     """
@@ -234,6 +249,7 @@ def checksum_audiofile(srcdir, destdir, filename):
                 matching_content.processing_state +"'."
     matching_content.processing_state = 'checksummed'
     matching_content.processing_hostname = HOSTNAME
+    matching_content.path = filepath.replace(STORAGE_BASE_PATH + os.sep, '') # relative path
     matching_content.save()
 
 
@@ -294,10 +310,16 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         print "Sent to server: " + \
                 json_data.replace(FILEHANDLING_CONFIG['echoprint_server_token'], 9*'*')
     print
-    ingest_request = requests.post("https://echoprint.c3s.cc/ingest",
-                                   data,
-                                   verify=False, # TO DO: remove when certificate is updated
-                                  )
+    
+    try:
+        ingest_request = requests.post("https://echoprint.c3s.cc/ingest",
+                                    data,
+                                    verify=False, # TO DO: remove when certificate is updated
+                                    )
+    except IOError:
+        print "ERROR: '" + audiofile + "' cloudn't be ingested into the EchoPrint server."
+        return
+
     print
     print "Server response:", ingest_request.status_code, ingest_request.reason
     print
@@ -310,6 +332,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
                 matching_content.processing_state +"'."
     matching_content.processing_state = 'fingerprinted'
     matching_content.processing_hostname = HOSTNAME
+    matching_content.path = filepath.replace(STORAGE_BASE_PATH + os.sep, '') # relative path
     matching_content.save()
 
     # TO DO: user access control
@@ -407,12 +430,18 @@ def directory_walker(processing_step_func, args):
                         # process file
                         processing_step_func(root, destsubdir, audiofile)
 
+
                         # unlock file
                         fcntl.flock(lockfile, fcntl.LOCK_UN)
                         lockfile.close()
                         os.remove(lockfilename)
                     except IOError:
                         pass
+
+
+# TO DO: move file to rejected folder and set rejected reason
+#def reject_file(filename, reason):
+#    move_file(filename, )
 
 
 def move_file(source, target):
@@ -466,8 +495,10 @@ def preview():
     """
     Get files from uploaded_path and creates a low quality audio snippet of it.
     """
-    directory_walker(preview_audiofile, (FILEHANDLING_CONFIG['uploaded_path'],
-                                         FILEHANDLING_CONFIG['previewed_path']))
+    directory_walker(preview_audiofile, (os.path.join(STORAGE_BASE_PATH,
+                                                      FILEHANDLING_CONFIG['uploaded_path']),
+                                         os.path.join(STORAGE_BASE_PATH,
+                                                      FILEHANDLING_CONFIG['previewed_path'])))
 
 
 @repro.command('checksum')
@@ -476,8 +507,10 @@ def checksum():
     """
     Get files from previewed_path and hash them.
     """
-    directory_walker(checksum_audiofile, (FILEHANDLING_CONFIG['previewed_path'],
-                                          FILEHANDLING_CONFIG['checksummed_path']))
+    directory_walker(checksum_audiofile, (os.path.join(STORAGE_BASE_PATH,
+                                                       FILEHANDLING_CONFIG['previewed_path']),
+                                          os.path.join(STORAGE_BASE_PATH,
+                                                       FILEHANDLING_CONFIG['checksummed_path'])))
 
 
 @repro.command('fingerprint')
@@ -486,8 +519,10 @@ def fingerprint():
     """
     Get files from checksummed_path and fingerprint them.
     """
-    directory_walker(fingerprint_audiofile, (FILEHANDLING_CONFIG['checksummed_path'],
-                                             FILEHANDLING_CONFIG['fingerprinted_path']))
+    directory_walker(fingerprint_audiofile, (os.path.join(STORAGE_BASE_PATH,
+                                                          FILEHANDLING_CONFIG['checksummed_path']),
+                                             os.path.join(STORAGE_BASE_PATH,
+                                                          FILEHANDLING_CONFIG['fingerprinted_path'])))
 
 
 @repro.command('match')
@@ -539,4 +574,7 @@ def loop(ctx):
 
 
 if __name__ == '__main__':
+    if ensure_path_exists(STORAGE_BASE_PATH) is None:
+        print "ERROR: '" + STORAGE_BASE_PATH + "' couldn't be created as storage base path."
+        exit()
     repro()

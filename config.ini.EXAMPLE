@@ -6,13 +6,18 @@ user     = admin
 password = admin 
 
 [filehandling]
-rejected_path=tmp/rejected
-previews_path=tmp/previews
-excerpts_path=tmp/excerpts
-uploaded_path=tmp/uploaded
-rejected_path=tmp/rejected
-previewed_path=tmp/previewed
-checksummed_path=tmp/checksummed
-fingerprinted_path=tmp/fingerprinted
-dropped_path=tmp/dropped
+# prohibit others from ingesting fingerprints into the EchoPrint server:
 echoprint_server_token=my_secr3t_t0ken_for_the_echopr1nt_server
+# here goes the static content for the web service (below are the subpaths):
+content_base_path=tmp
+previews_path=previews
+excerpts_path=excerpts
+# this is the mount for the repertoire processor (below are the subpaths) 
+storage_base_path=tmp
+rejected_path=rejected
+uploaded_path=uploaded
+rejected_path=rejected
+previewed_path=previewed
+checksummed_path=checksummed
+fingerprinted_path=fingerprinted
+dropped_path=dropped
