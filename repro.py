@@ -12,7 +12,9 @@ The one and only C3S repertoire processing utility
 
 import sys
 import os
+import time
 import fcntl
+import socket
 # import shutil
 import subprocess
 import ConfigParser
@@ -22,10 +24,30 @@ import re
 import hashlib
 import click
 import requests
+from pydub import AudioSegment
 from proteus import config, Model
 
 
-#--- Initialization ---
+#--- some constants ---
+
+# 2DO: _preview_default
+_preview_format = 'ogg'
+_preview_quality = '0'
+_preview_samplerate = '16000'
+_preview_fadein = 1000
+_preview_fadeout = 1000
+_preview_segment_duration = 8000
+_preview_segment_crossfade = 2000
+_preview_segment_interval = 54000
+_excerpt_format = 'wav'
+_excerpt_quality = '0'
+_excerpt_samplerate = '11025'
+_excerpt_fadein = 0
+_excerpt_fadeout = 0
+_excerpt_segment_duration = 60000
+
+
+#--- some initialization ---
 
 
 # read config from .ini
@@ -33,6 +55,7 @@ CONFIGURATION = ConfigParser.ConfigParser()
 CONFIGURATION.read("config.ini")
 PROTEUS_CONFIG = dict(CONFIGURATION.items('proteus'))
 FILEHANDLING_CONFIG = dict(CONFIGURATION.items('filehandling'))
+HOSTNAME = socket.gethostname()
 
 #  get access to database
 config.set_xmlrpc(
@@ -42,6 +65,135 @@ config.set_xmlrpc(
 
 
 #--- Processing stage functions for single audiofiles ---
+
+
+def preview_audiofile(srcdir, destdir, filename):
+    """
+    Creates a low-quality preview audio snippet for newly uploaded files.
+    """
+
+    # make sure peviews and excerpts path exist
+    previews_path = FILEHANDLING_CONFIG['previews_path']
+    if ensure_path_exists(previews_path) is None:
+        print "ERROR: '" + previews_path + "' couldn't be created for previews."
+        return
+    excerpts_path = FILEHANDLING_CONFIG['excerpts_path']
+    if ensure_path_exists(excerpts_path) is None:
+        print "ERROR: '" + excerpts_path + "' couldn't be created for excerpts."
+        return
+
+    # create paths with filenames
+    filepath = os.path.join(srcdir, filename)
+    previews_filepath = os.path.join(previews_path, filename)
+    excerpts_filepath = os.path.join(excerpts_path, filename)
+
+    # create preview
+    audio = AudioSegment.from_file(filepath)
+    result = create_preview(audio, previews_filepath)
+    if not result:
+        print "ERROR: '" + filename + "' couldn't be previewed."
+        return
+
+    # create excerpts
+    audio = AudioSegment.from_file(filepath)
+    result = create_excerpt(audio, excerpts_filepath)
+    if not result:
+        print "ERROR: No excerpt could be cut out of '" + filename + "'."
+        return
+
+    # find content in database from filename
+    matching_content = get_content_by_filename(filename)
+    if matching_content is None:
+        return
+
+    # move file to checksummed directory
+    if move_file(filepath, destdir + os.sep + filename) is False:
+        print "ERROR: '" + filename + "' couldn't be moved to '" + destdir +"'."
+        return
+
+    # check and update content processing status
+    if matching_content.processing_state != 'uploaded':
+        print "WARNING: File '" + filename + "' in the uploaded folder had status '" + \
+                matching_content.processing_state +"'."
+    matching_content.processing_state = 'previewed'
+    matching_content.processing_hostname = HOSTNAME
+    matching_content.save()
+
+def get_segments(audio):
+    """
+    Yields the segments back to the caller one by one.
+    """
+    _total = len(audio)
+    _segment = _preview_segment_duration
+    _interval = _preview_segment_interval
+    if _segment >= _total:
+        yield audio
+    else:
+        start = 0
+        end = _segment
+        while end < _total:
+            yield audio[start:end]
+            start = end + _interval + 1
+            end = start + _segment
+
+def create_preview(audio, preview_path):
+
+    # convert to mono
+    mono = audio.set_channels(1)
+
+    # mix segments
+    preview = None
+    for segment in get_segments(mono):
+        preview = segment if not preview else preview.append(
+            segment, crossfade=_preview_segment_crossfade
+        )
+
+    # fade in/out
+    preview = preview.fade_in(_preview_fadein).fade_out(_preview_fadeout)
+
+    # export
+    ok_return = True
+    try:
+        preview.export(
+            preview_path,
+            format=_preview_format,
+            parameters=[
+                "-aq", _preview_quality,
+                "-ar", _preview_samplerate
+            ]
+        )
+    except:
+        ok_return = False
+
+    return ok_return and os.path.isfile(preview_path)
+
+def create_excerpt(audio, excerpt_path):
+
+    # convert to mono
+    mono = audio.set_channels(1)
+
+    # cut out one minute from the middle of the file
+    if len(audio) > 60000:
+        excerpt_center = len(audio) / 2
+        excerpt_start = excerpt_center - 30000
+        excerpt_end = excerpt_center + 30000
+        audio = audio[excerpt_start:excerpt_end]
+
+    # export
+    ok_return = True
+    try:
+        audio.export(
+            excerpt_path,
+            format=_excerpt_format,
+            parameters=[
+                "-aq", _excerpt_quality,
+                "-ar", _excerpt_samplerate
+            ]
+        )
+    except:
+        ok_return = False
+
+    return ok_return and os.path.isfile(excerpt_path)
 
 
 def checksum_audiofile(srcdir, destdir, filename):
@@ -81,6 +233,7 @@ def checksum_audiofile(srcdir, destdir, filename):
         print "WARNING: File '" + filename + "' in the previewed folder had status '" + \
                 matching_content.processing_state +"'."
     matching_content.processing_state = 'checksummed'
+    matching_content.processing_hostname = HOSTNAME
     matching_content.save()
 
 
@@ -97,19 +250,16 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     matching_content = get_content_by_filename(filename)
     if matching_content is None:
         return
+
+    # already metadata present in creation? then put it on the EchoPrint server rightaway
+    artist = ''
+    title = ''
+    release = ''
     matching_creation = get_creation_by_content(matching_content)
-    if matching_creation is None:
-        return
-
-    #if matching_creation.artist.name == '' or matching_creation.title == '':
-    #    print "--> postponed till metadata is available"
-    #    return
-
-    if len(matching_creation.releases) == 0:
-        release = ''
-    else:
+    if matching_creation is not None:
+        artist = matching_creation.artist.name
+        title = matching_creation.title
         release = matching_creation.releases[0]
-        # TO DO: decide what to do if there is more than one release for a title
 
     # create fringerprint from audio file using echoprint-codegen
     print '-' * 80
@@ -126,12 +276,12 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     meta_fp = json.loads(json_meta_fp)
 
     # save fingerprint to echoprint server
-    data = {'track_id': matching_creation.code,
+    data = {'track_id': filename,
             'token' : FILEHANDLING_CONFIG['echoprint_server_token'],
             'fp': meta_fp[0]['code'],
-            'artist' : matching_creation.artist.name,
+            'artist' : artist,
             'release' : release,
-            'track' : matching_creation.title,
+            'track' : title,
             'length' : int(matching_content.length),
             'codever' : str(meta_fp[0]['metadata']['version']),
            }
@@ -159,6 +309,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         print "WARNING: File '" + filename + "' in the checksummed folder had status '" + \
                 matching_content.processing_state +"'."
     matching_content.processing_state = 'fingerprinted'
+    matching_content.processing_hostname = HOSTNAME
     matching_content.save()
 
     # TO DO: user access control
@@ -209,9 +360,9 @@ def get_creation_by_content(content):
     """
     creation = Model.get('creation')
     matching_creations = creation.find(['id', "=", content.id])
-    if len(matching_contents) == 0:
-        print "ERROR: Wasn't able to find creation entry in the database with id '" + content.id + \
-              "' for file '" + content.uuid + "'."
+    if len(matching_creations) == 0:
+        print "ERROR: Wasn't able to find creation entry in the database with id '" + \
+              str(content.id) + "' for file '" + content.uuid + "'."
         return None
     if len(matching_creations) > 1:
         print "WARNING: More than one content entry in the database for '" + content.uuid + \
@@ -230,6 +381,7 @@ def directory_walker(processing_step_func, args):
 
     startpath = args[0]
     destdir = args[1]
+    print "Processing " + startpath
     if ensure_path_exists(destdir) is None:
         print "ERROR: '" + destdir + "' couldn't be created."
         return
@@ -287,6 +439,9 @@ def move_file(source, target):
 
 
 def ensure_path_exists(path):
+    """
+    If path doesn't exist, create directory.
+    """
     if not os.path.exists(path):
         try:
             os.makedirs(path)
@@ -303,6 +458,16 @@ def repro():
     """
     Repertoire Processor command line tool.
     """
+
+
+@repro.command('preview')
+#@click.pass_context
+def preview():
+    """
+    Get files from uploaded_path and creates a low quality audio snippet of it.
+    """
+    directory_walker(preview_audiofile, (FILEHANDLING_CONFIG['uploaded_path'],
+                                         FILEHANDLING_CONFIG['previewed_path']))
 
 
 @repro.command('checksum')
@@ -326,7 +491,6 @@ def fingerprint():
 
 
 @repro.command('match')
-#@click.argument('code')
 #@click.pass_context
 def match(): # code
     """
@@ -343,6 +507,35 @@ def match(): # code
     #code = result.fingerprint
 
     print result[0].fingerprint
+
+
+@repro.command('all')
+@click.pass_context
+def all(ctx):
+    """
+    Apply all processing steps.
+
+    Looks for new files to be previed after each processing step.
+    """
+    ctx.invoke(preview)
+    ctx.invoke(checksum)
+    ctx.invoke(preview)
+    ctx.invoke(fingerprint)
+    ctx.invoke(preview)
+
+
+@repro.command('loop')
+@click.pass_context
+def loop(ctx):
+    """
+    Apply all processing steps in an endless loop.
+    """
+    while True:
+        ctx.invoke(all)
+        time_to_wait_between_cycles = 10
+        print 'Waiting for ' + str(time_to_wait_between_cycles) + 'seconds...'
+        time.sleep(time_to_wait_between_cycles)
+        print 'entering new processing cycle'
 
 
 if __name__ == '__main__':

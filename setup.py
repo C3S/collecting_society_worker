@@ -12,6 +12,7 @@ install_requires = [
     'proteus==3.4.8',
     'click==6.7',
     'pyechonest',
+    'pydub',
 ]
 test_requires = [
     'coverage',

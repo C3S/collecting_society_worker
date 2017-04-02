@@ -6,6 +6,9 @@ user     = admin
 password = admin 
 
 [filehandling]
+rejected_path=tmp/rejected
+previews_path=tmp/previews
+excerpts_path=tmp/excerpts
 uploaded_path=tmp/uploaded
 rejected_path=tmp/rejected
 previewed_path=tmp/previewed
