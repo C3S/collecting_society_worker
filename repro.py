@@ -187,6 +187,29 @@ def create_excerpt(audio, excerpt_path):
     # convert to mono
     mono = audio.set_channels(1)
 
+    # this was for experimenting with different code lengths:
+    #for exlen in range(1000, 61000, 1000):
+    #    # cut out one minute from the middle of the file
+    #    if len(audio) > exlen:
+    #        excerpt_center = len(audio) / 2
+    #        excerpt_start = excerpt_center - exlen/2
+    #        excerpt_end = excerpt_center + exlen/2
+    #        audio2 = audio[excerpt_start:excerpt_end]
+    #
+    #    # export
+    #    ok_return = True
+    #    try:
+    #        audio2.export(
+    #            excerpt_path+"-"+str(int(exlen/1000))+".wav",
+    #            format=_excerpt_format,
+    #            parameters=[
+    #                "-aq", _excerpt_quality,
+    #                "-ar", _excerpt_samplerate
+    #            ]
+    #        )
+    #    except:
+    #        ok_return = False
+
     # cut out one minute from the middle of the file
     if len(audio) > 60000:
         excerpt_center = len(audio) / 2
@@ -276,6 +299,12 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         artist = matching_creation.artist.name
         title = matching_creation.title
         release = matching_creation.releases[0]
+    if artist == '':
+        artist = 'DummyFiFaFu'
+    if title == '':
+        title = 'DummyFiFaFu'
+    if release == '':
+        release = 'DummyFiFaFu'
 
     # create fringerprint from audio file using echoprint-codegen
     print '-' * 80
@@ -292,9 +321,9 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     meta_fp = json.loads(json_meta_fp)
 
     # save fingerprint to echoprint server
-    data = {'track_id': filename,
+    data = {'track_id': filename.replace('-', ''), # '-' reserved for fp segment
             'token' : FILEHANDLING_CONFIG['echoprint_server_token'],
-            'fp': meta_fp[0]['code'],
+            'fp_code': meta_fp[0]['code'].encode('utf8'),
             'artist' : artist,
             'release' : release,
             'track' : title,
@@ -310,13 +339,13 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         print "Sent to server: " + \
                 json_data.replace(FILEHANDLING_CONFIG['echoprint_server_token'], 9*'*')
     print
-    
+
     try:
         ingest_request = requests.post("https://echoprint.c3s.cc/ingest",
                                     data,
                                     verify=False, # TO DO: remove when certificate is updated
                                     )
-    except IOError:
+    except:
         print "ERROR: '" + audiofile + "' cloudn't be ingested into the EchoPrint server."
         return
 
@@ -349,6 +378,12 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     new_logentry.fingerprinting_algorithm = 'EchoPrint'
     new_logentry.fingerprinting_version = str(meta_fp[0]['metadata']['version'])
     new_logentry.save()
+
+    # TO DO: check newly ingested fingerprint using the excerpt
+    # Response codes: 0=NOT_ENOUGH_CODE, 1=CANNOT_DECODE, 2=SINGLE_BAD_MATCH, 3=SINGLE_GOOD_MATCH,
+    # 4=NO_RESULTS, 5=MULTIPLE_GOOD_MATCH_HISTOGRAM_INCREASED,
+    # 6=MULTIPLE_GOOD_MATCH_HISTOGRAM_DECREASED, 7=MULTIPLE_BAD_HISTOGRAM_MATCH,
+    # 8=MULTIPLE_GOOD_MATCH
 
     # move file to fingerprinted directory
     if move_file(filepath, destdir + os.sep + filename) is False:
@@ -437,7 +472,8 @@ def directory_walker(processing_step_func, args):
                         os.remove(lockfilename)
                     except IOError:
                         pass
-
+    
+    print "Finished processing " + startpath
 
 # TO DO: move file to rejected folder and set rejected reason
 #def reject_file(filename, reason):
