@@ -133,7 +133,7 @@ def preview_audiofile(srcdir, destdir, filename):
     reason_details = ''
     if audio.frame_rate < 11025:
         reason_details = 'Invalid frame rate of ' + str(int(audio.frame_rate)) + ' Hz'
-    if audio.sample_width < 10: # less than one byte?
+    if audio.sample_width < 1: # less than one byte?
         reason_details = 'Invalid sample rate of ' + str(int(audio.sample_width * 8)) + ' bits'
     if reason_details != '':
         reject_file(filepath, 'Format Error', reason_details)
