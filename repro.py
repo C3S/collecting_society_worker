@@ -74,7 +74,7 @@ def preview_audiofile(srcdir, destdir, filename):
     Creates a low-quality preview audio snippet for newly uploaded files.
     """
 
-    # make sure peviews and excerpts path exist
+    # make sure previews and excerpts paths exist
     content_base_path = FILEHANDLING_CONFIG['content_base_path']
     if ensure_path_exists(content_base_path) is None:
         print "ERROR: '" + content_base_path + "' couldn't be created as content base path."
@@ -84,6 +84,7 @@ def preview_audiofile(srcdir, destdir, filename):
     if ensure_path_exists(previews_path) is None:
         print "ERROR: '" + previews_path + "' couldn't be created for previews."
         return
+
     excerpts_path = FILEHANDLING_CONFIG['excerpts_path']
     if ensure_path_exists(excerpts_path) is None:
         print "ERROR: '" + excerpts_path + "' couldn't be created for excerpts."
@@ -128,6 +129,15 @@ def preview_audiofile(srcdir, destdir, filename):
     matching_content.sample_rate = int(audio.frame_rate)
     matching_content.sample_width = int(audio.sample_width * 8)
     matching_content.save()
+
+    reason_details = ''
+    if audio.frame_rate < 11025:
+        reason_details = 'Invalid frame rate of ' + str(int(audio.frame_rate)) + ' Hz'
+    if audio.sample_width < 10: # less than one byte?
+        reason_details = 'Invalid sample rate of ' + str(int(audio.sample_width * 8)) + ' bits'
+    if reason_details != '':
+        reject_file(filepath, 'Format Error', reason_details)
+        return
 
     # move file to checksummed directory
     if move_file(filepath, destdir + os.sep + filename) is False:
@@ -501,8 +511,10 @@ def move_file(source, target):
         #shutil.copyfile(source + ".checksums", target + ".checksums")
         #os.remove(source)
         #os.remove(source + ".checksums")
-        os.rename(source + ".checksums", target + ".checksums")
-        os.rename(source + ".checksum", target + ".checksum")
+        if os.path.isfile(source + ".checksums"):
+            os.rename(source + ".checksums", target + ".checksums")
+        if os.path.isfile(source + ".checksum"):
+            os.rename(source + ".checksum", target + ".checksum")
         os.rename(source, target) # suppose we only have one mounted filesystem
     except IOError:
         pass
@@ -519,6 +531,48 @@ def ensure_path_exists(path):
         except IOError:
             pass
     return os.path.exists(path)
+
+def reject_file(source, reason, reason_details):
+    """
+    Moves a file to the 'rejected' folder and writes the reject reason to the database.
+    """
+
+    # check file
+    if not os.path.isfile(source):
+        return False
+
+    content_base_path = FILEHANDLING_CONFIG['content_base_path']
+    if ensure_path_exists(content_base_path) is None:
+        print "ERROR: '" + content_base_path + "' couldn't be created as content base path."
+        return
+
+    rejected_path = FILEHANDLING_CONFIG['rejected_path']
+    if ensure_path_exists(rejected_path) is None:
+        print "ERROR: '" + rejected_path + "' couldn't be created for rejected files."
+        return
+
+    filename = os.sep.join(source.rsplit(os.sep, 2)[-2:])  # get artist-id/filename from source path
+    rejected_filepath_relative = os.path.join(rejected_path, filename)
+    rejected_filepath = os.path.join(content_base_path, rejected_filepath_relative)
+
+    move_file(source, rejected_filepath)
+
+    # TO-DO: cleanup possible preview and excerpt files
+
+    # find content in database from filename
+    matching_content = get_content_by_filename(filename)
+    if matching_content is None:
+        print "ERROR: Couldn't find content entry for '" + rejected_filepath_relative + \
+              "' in database."
+        return
+
+    # check and update content processing status, save some pydub metadata to database
+    matching_content.processing_state = 'rejected'
+    matching_content.processing_hostname = HOSTNAME
+    matching_content.path = rejected_filepath_relative
+    matching_content.rejection_reason = reason
+    # TO-DO: matching_content.rejection_reason_details = reason_details
+    matching_content.save()
 
 
 #--- Click Commands ---
