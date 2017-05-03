@@ -259,6 +259,11 @@ def checksum_audiofile(srcdir, destdir, filename):
     if matching_content is None:
         return
 
+    # write checksum to file '<UUID>.checksum'
+    checksumfile = open(srcdir + os.sep + filename + '.checksum', 'w+')
+    checksumfile.write('sha256:'+sha256.hexdigest())
+    checksumfile.close()
+
     # move file to checksummed directory
     if move_file(filepath, destdir + os.sep + filename) is False:
         print "ERROR: '" + filename + "' couldn't be moved to '" + destdir +"'."
@@ -497,6 +502,7 @@ def move_file(source, target):
         #os.remove(source)
         #os.remove(source + ".checksums")
         os.rename(source + ".checksums", target + ".checksums")
+        os.rename(source + ".checksum", target + ".checksum")
         os.rename(source, target) # suppose we only have one mounted filesystem
     except IOError:
         pass
