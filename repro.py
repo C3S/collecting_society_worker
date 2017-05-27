@@ -250,6 +250,8 @@ def checksum_audiofile(srcdir, destdir, filename):
     """
 
     filepath = os.path.join(srcdir, filename)
+    statinfo = os.stat(filepath)
+    filelength = statinfo.st_size
 
     bufsize = 65536
 
@@ -271,15 +273,13 @@ def checksum_audiofile(srcdir, destdir, filename):
 
     # write checksum to file '<UUID>.checksum'
     checksumfile = open(srcdir + os.sep + filename + '.checksum', 'w+')
-    checksumfile.write('sha256:'+sha256.hexdigest())
+    checksumfile.write(sha256.__class__.__name__ + ':' + sha256.hexdigest())
     checksumfile.close()
 
     # move file to checksummed directory
     if move_file(filepath, destdir + os.sep + filename) is False:
         print "ERROR: '" + filename + "' couldn't be moved to '" + destdir +"'."
         return
-
-    # TO DO: save sha256 to database
 
     # check and update content processing status
     if matching_content.processing_state != 'previewed':
@@ -290,6 +290,25 @@ def checksum_audiofile(srcdir, destdir, filename):
     matching_content.path = filepath.replace(STORAGE_BASE_PATH + os.sep, '') # relative path
     matching_content.save()
 
+    # save sha256 to database
+    matching_checksums = [x for x in matching_content.checksums if x.begin == 0 and x.end == filelength]
+    if len(matching_checksums) == 0:
+        # create a checksum
+        Checksum = Model.get('checksum')
+        checksum_to_use = Checksum()
+        matching_content.checksums.append(checksum_to_use)
+    elif len(matching_checksums) > 1: # shouldn't happen
+        print "WARNING: More than one whole file checksum entry in the database for '" + filename + \
+                "'. Please clean up the mess! Using the first one."
+    else:
+        checksum_to_use = matching_checksums[0] # just one found: use it!
+
+    checksum_to_use.code = sha256.hexdigest()
+    checksum_to_use.timestamp = datetime.datetime.now()
+    checksum_to_use.algorithm = sha256.__class__.__name__
+    checksum_to_use.begin = 0
+    checksum_to_use.end = filelength
+    checksum_to_use.save()
 
 def fingerprint_audiofile(srcdir, destdir, filename):
     """
@@ -357,11 +376,11 @@ def fingerprint_audiofile(srcdir, destdir, filename):
 
     try:
         ingest_request = requests.post("https://echoprint.c3s.cc/ingest",
-                                    data,
-                                    verify=False, # TO DO: remove when certificate is updated
-                                    )
+                         data,
+                         verify=False, # TO DO: remove when certificate is updated
+                         )
     except:
-        print "ERROR: '" + audiofile + "' cloudn't be ingested into the EchoPrint server."
+        print "ERROR: '" + srcdir + "' cloudn't be ingested into the EchoPrint server."
         return
 
     print
@@ -416,8 +435,8 @@ def get_content_by_filename(filename):
     """
     Get a content by filename/uuid.
     """
-    content = Model.get('content')
-    matching_contents = content.find(['uuid', "=", filename])
+    Content = Model.get('content')
+    matching_contents = Content.find(['uuid', "=", filename])
     if len(matching_contents) == 0:
         print "ERROR: Wasn't able to find content entry in the database for '" + filename + "'."
         return None
@@ -431,8 +450,8 @@ def get_creation_by_content(content):
     """
     Get a creation by content(.id).
     """
-    creation = Model.get('creation')
-    matching_creations = creation.find(['id', "=", content.id])
+    Creation = Model.get('creation')
+    matching_creations = Creation.find(['id', "=", content.id])
     if len(matching_creations) == 0:
         print "ERROR: Wasn't able to find creation entry in the database with id '" + \
               str(content.id) + "' for file '" + content.uuid + "'."
