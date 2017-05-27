@@ -136,7 +136,7 @@ def preview_audiofile(srcdir, destdir, filename):
     if audio.sample_width < 1: # less than one byte?
         reason_details = 'Invalid sample rate of ' + str(int(audio.sample_width * 8)) + ' bits'
     if reason_details != '':
-        reject_file(filepath, 'Format Error', reason_details)
+        reject_file(filepath, 'format_error', reason_details)
         return
 
     # move file to checksummed directory
@@ -266,10 +266,13 @@ def checksum_audiofile(srcdir, destdir, filename):
 
     print "SHA256 of file {0}: {1}".format(filename, sha256.hexdigest())
 
+    # TO DO: check for duplicat checksums in database and possibly issue a 'checksum_collision'
+
     # find content in database from filename
     matching_content = get_content_by_filename(filename)
     if matching_content is None:
-        return
+        print "ERROR: Orphaned file " + filename + " (no DB entry) -- please clean up!"
+        return # shouldn't happen
 
     # write checksum to file '<UUID>.checksum'
     checksumfile = open(srcdir + os.sep + filename + '.checksum', 'w+')
@@ -350,9 +353,14 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     if fpcode_pos > 0 and len(json_meta_fp) > 80:
         print "Got from codegen:" + json_meta_fp[:fpcode_pos+40] + \
                 "....." + json_meta_fp[-40:]
-    else:
+    else:        
         print "Got from codegen:" + json_meta_fp
+        reject_file(filepath, 'no_fingerprint', "Got from codegen:" + json_meta_fp)
+        return
+
     meta_fp = json.loads(json_meta_fp)
+
+    # TO DO: More sanity checks with possible no_fingerprint rejection
 
     # save fingerprint to echoprint server
     data = {'track_id': filename.replace('-', ''), # '-' reserved for fp segment
@@ -376,10 +384,11 @@ def fingerprint_audiofile(srcdir, destdir, filename):
 
     try:
         ingest_request = requests.post("https://echoprint.c3s.cc/ingest",
-                         data,
-                         verify=False, # TO DO: remove when certificate is updated
-                         )
+                                       data,
+                                       verify=False, # TO DO: remove when certificate is updated
+                                       )
     except:
+        reject_file(filepath, 'no_fingerprint', "Could not be sent to EchoPrint server response code (server offline?).")
         print "ERROR: '" + srcdir + "' cloudn't be ingested into the EchoPrint server."
         return
 
@@ -388,6 +397,12 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     print
     print "Body: " + (ingest_request.text[:500] + '...' + ingest_request.text[-1500:]
                       if len(ingest_request.text) > 2000 else ingest_request.text)
+    
+    if ingest_request.status_code != 200:
+        reject_file(filepath, 'no_fingerprint', "Could not be sent to EchoPrint server response code " + \
+                    ingest_request.status_code + ': ' + ingest_request.reason)
+        print "ERROR: '" + srcdir + "' cloudn't be ingested into the EchoPrint server."
+        return
 
     # check and update content processing state
     if matching_content.processing_state != 'checksummed':
@@ -499,14 +514,15 @@ def directory_walker(processing_step_func, args):
                         # process file
                         processing_step_func(root, destsubdir, audiofile)
 
+                    except IOError:
+                        pass
 
+                    finally:
                         # unlock file
                         fcntl.flock(lockfile, fcntl.LOCK_UN)
                         lockfile.close()
                         os.remove(lockfilename)
-                    except IOError:
-                        pass
-    
+
     print "Finished processing " + startpath
 
 # TO DO: move file to rejected folder and set rejected reason
@@ -570,7 +586,7 @@ def reject_file(source, reason, reason_details):
         print "ERROR: '" + rejected_path + "' couldn't be created for rejected files."
         return
 
-    filename = os.sep.join(source.rsplit(os.sep, 2)[-2:])  # get artist-id/filename from source path
+    filename = os.sep.join(source.rsplit(os.sep, 2)[-2:])  # get user-id/filename from source path
     rejected_filepath_relative = os.path.join(rejected_path, filename)
     rejected_filepath = os.path.join(content_base_path, rejected_filepath_relative)
 
@@ -579,7 +595,11 @@ def reject_file(source, reason, reason_details):
     # TO-DO: cleanup possible preview and excerpt files
 
     # find content in database from filename
-    matching_content = get_content_by_filename(filename)
+    slash_pos = filename.find(os.sep)
+    if slash_pos > 0:        
+        matching_content = get_content_by_filename(filename[slash_pos+1:])
+    else:
+        matching_content = get_content_by_filename(filename)
     if matching_content is None:
         print "ERROR: Couldn't find content entry for '" + rejected_filepath_relative + \
               "' in database."
@@ -590,7 +610,7 @@ def reject_file(source, reason, reason_details):
     matching_content.processing_hostname = HOSTNAME
     matching_content.path = rejected_filepath_relative
     matching_content.rejection_reason = reason
-    # TO-DO: matching_content.rejection_reason_details = reason_details
+    matching_content.rejection_reason_details = reason_details
     matching_content.save()
 
 
