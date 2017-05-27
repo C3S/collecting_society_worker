@@ -116,6 +116,54 @@ def preview_audiofile(srcdir, destdir, filename):
         print "ERROR: Couldn't find content entry for '" + filename + "' in database."
         return
 
+    # do a first test query on the EchoPrint server (2nd one after ingest)
+    score = 0
+    track_id_from_test_query = None
+    similiar_artist = ''
+    similiar_track = ''
+
+    # create fringerprint from audio file using echoprint-codegen and relate to the score
+    print '-' * 80
+    print "test query with excerpt file " + excerpts_filepath
+    proc = subprocess.Popen(["../echoprint-codegen/echoprint-codegen", excerpts_filepath],
+                            stdout=subprocess.PIPE)
+    json_meta_fp = proc.communicate()[0]
+    fpcode_pos = json_meta_fp.find('"code":')
+    if fpcode_pos > 0 and len(json_meta_fp) > 80:
+        print "Got from codegen:" + json_meta_fp[:fpcode_pos+40] + \
+                "....." + json_meta_fp[-40:]
+
+        meta_fp = json.loads(json_meta_fp)
+
+        try:
+            query_request = requests.get("https://echoprint.c3s.cc/query?fp_code=" +
+                                            meta_fp[0]['code'].encode('utf8'),
+                                            verify=False, # TO DO: remove when cert. is updated
+                                        )
+        except:
+            print "ERROR: '" + excerpts_filepath_relative + \
+                "' cloudn't be test-queried on the EchoPrint server."
+            return
+
+        print
+        print "Server response:", query_request.status_code, query_request.reason
+        print
+        print "Body: " + (query_request.text[:500] + '...' + query_request.text[-1500:]
+                            if len(query_request.text) > 2000 else query_request.text)
+
+        if query_request.status_code != 200:
+            print "ERROR: '" + srcdir + "' cloudn't be test-queried on the EchoPrint server."
+        else:
+            qresult = json.loads(query_request.text)
+            score = qresult['score']
+            if qresult['match']:
+                track_id_from_test_query = qresult['track_id'][:8] + '-' + qresult['track_id'][8:12] + \
+                                            '-' + qresult['track_id'][12:16] + '-' + qresult['track_id'][16:]
+                similiar_artist = qresult['artist']
+                similiar_track = qresult['track']
+    else:
+        print "Got from codegen:" + json_meta_fp
+
     # check and update content processing status, save some pydub metadata to database
     if matching_content.processing_state != 'uploaded':
         print "WARNING: File '" + filename + "' in the uploaded folder had status '" + \
@@ -128,12 +176,23 @@ def preview_audiofile(srcdir, destdir, filename):
     matching_content.channels = int(audio.channels)
     matching_content.sample_rate = int(audio.frame_rate)
     matching_content.sample_width = int(audio.sample_width * 8)
+    matching_content.pre_ingest_excerpt_score = score
+    if track_id_from_test_query != None:
+        most_similar_content = get_content_by_filename(track_id_from_test_query)
+        if most_similar_content is None:
+            print "ERROR: Couldn't find content entry of most similar content for '" + \
+            filename + "' in database. EchoPrint server seems out of sync with database."
+        else:
+            matching_content.most_similiar_content = most_similar_content
+    matching_content.most_similiar_artist = similiar_artist
+    matching_content.most_similiar_track = similiar_track
     matching_content.save()
 
+    # check it the audio format is much too crappy even for 8bit enthusiasts
     reason_details = ''
     if audio.frame_rate < 11025:
         reason_details = 'Invalid frame rate of ' + str(int(audio.frame_rate)) + ' Hz'
-    if audio.sample_width < 1: # less than one byte?
+    if audio.sample_width < 1: # less than one byte? is this even possible? :-p
         reason_details = 'Invalid sample rate of ' + str(int(audio.sample_width * 8)) + ' bits'
     if reason_details != '':
         reject_file(filepath, 'format_error', reason_details)
@@ -162,6 +221,9 @@ def get_segments(audio):
             end = start + _segment
 
 def create_preview(audio, preview_path):
+    """
+    mix a cool audio preview file with low quality
+    """
 
     # convert to mono
     mono = audio.set_channels(1)
@@ -193,6 +255,9 @@ def create_preview(audio, preview_path):
     return ok_return and os.path.isfile(preview_path)
 
 def create_excerpt(audio, excerpt_path):
+    """
+    well, as the functin name says...
+    """
 
     # convert to mono
     mono = audio.set_channels(1)
@@ -404,6 +469,69 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         print "ERROR: '" + srcdir + "' cloudn't be ingested into the EchoPrint server."
         return
 
+    # do a 2nd test query on the EchoPrint server (1nd was before ingest, during preview)
+    score = 0
+    track_id_from_test_query = ''
+    similiar_artist = ''
+    similiar_track = ''
+
+    # make sure previews and excerpts paths exist
+    content_base_path = FILEHANDLING_CONFIG['content_base_path']
+    if ensure_path_exists(content_base_path) is None:
+        print "ERROR: '" + content_base_path + "' couldn't be created as content base path."
+        return
+
+    excerpts_path = FILEHANDLING_CONFIG['excerpts_path']
+    if ensure_path_exists(excerpts_path) is None:
+        print "ERROR: '" + excerpts_path + "' couldn't be created for excerpts."
+        return
+
+    # create excerpt paths with filenames
+    excerpts_filepath_relative = os.path.join(excerpts_path, filename)
+    excerpts_filepath = os.path.join(content_base_path, excerpts_filepath_relative)
+
+    # create fringerprint from audio file using echoprint-codegen and relate to the score
+    print '-' * 80
+    print "test query with excerpt file " + excerpts_filepath
+    proc = subprocess.Popen(["../echoprint-codegen/echoprint-codegen", excerpts_filepath],
+                            stdout=subprocess.PIPE)
+    json_meta_fp = proc.communicate()[0]
+    fpcode_pos = json_meta_fp.find('"code":')
+    if fpcode_pos > 0 and len(json_meta_fp) > 80:
+        print "Got from codegen:" + json_meta_fp[:fpcode_pos+40] + \
+                "....." + json_meta_fp[-40:]
+
+        meta_fp = json.loads(json_meta_fp)
+
+        try:
+            query_request = requests.get("https://echoprint.c3s.cc/query?fp_code=" +
+                                         meta_fp[0]['code'].encode('utf8'),
+                                         verify=False, # TO DO: remove when cert. is updated
+                                        )
+        except:
+            print "ERROR: '" + excerpts_filepath_relative + \
+                "' cloudn't be test-queried on the EchoPrint server."
+            return
+
+        print
+        print "Server response:", query_request.status_code, query_request.reason
+        print
+        print "Body: " + (query_request.text[:500] + '...' + query_request.text[-1500:]
+                            if len(query_request.text) > 2000 else query_request.text)
+
+        if query_request.status_code != 200:
+            print "ERROR: '" + srcdir + "' cloudn't be test-queried on the EchoPrint server."
+        else:
+            qresult = json.loads(query_request.text)
+            score = qresult['score']
+            if qresult['match']:            
+                track_id_from_test_query = qresult['track_id'][:8] + '-' + qresult['track_id'][8:12] + '-' \
+                                        + qresult['track_id'][12:16] + '-' + qresult['track_id'][16:]
+                similiar_artist = qresult['artist']
+                similiar_track = qresult['track']
+    else:
+        print "Got from codegen:" + json_meta_fp
+
     # check and update content processing state
     if matching_content.processing_state != 'checksummed':
         print "WARNING: File '" + filename + "' in the checksummed folder had status '" + \
@@ -411,6 +539,15 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     matching_content.processing_state = 'fingerprinted'
     matching_content.processing_hostname = HOSTNAME
     matching_content.path = filepath.replace(STORAGE_BASE_PATH + os.sep, '') # relative path
+    matching_content.post_invest_excerpt_score = score
+    if track_id_from_test_query != None:
+        most_similar_content = get_content_by_filename(track_id_from_test_query)
+        if most_similar_content is None:
+            print "ERROR: Couldn't find content entry of most similar content for '" + \
+            filename + "' in database. EchoPrint server seems out of sync with database."
+        else:
+            if track_id_from_test_query == matching_content.most_similiar_content.uuid:
+                matching_content.pre_invest_excerpt_score = 0
     matching_content.save()
 
     # TO DO: user access control
