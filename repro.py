@@ -469,7 +469,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         print "ERROR: '" + srcdir + "' cloudn't be ingested into the EchoPrint server."
         return
 
-    # do a 2nd test query on the EchoPrint server (1nd was before ingest, during preview)
+    # do a 2nd test query on the EchoPrint server (1st was before ingest, during preview)
     score = 0
     track_id_from_test_query = ''
     similiar_artist = ''
@@ -539,7 +539,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     matching_content.processing_state = 'fingerprinted'
     matching_content.processing_hostname = HOSTNAME
     matching_content.path = filepath.replace(STORAGE_BASE_PATH + os.sep, '') # relative path
-    matching_content.post_invest_excerpt_score = score
+    matching_content.post_ingest_excerpt_score = score
     if track_id_from_test_query != None:
         most_similar_content = get_content_by_filename(track_id_from_test_query)
         if most_similar_content is None:
@@ -547,7 +547,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
             filename + "' in database. EchoPrint server seems out of sync with database."
         else:
             if track_id_from_test_query == matching_content.most_similiar_content.uuid:
-                matching_content.pre_invest_excerpt_score = 0
+                matching_content.pre_ingest_excerpt_score = 0
     matching_content.save()
 
     # TO DO: user access control
