@@ -25,6 +25,7 @@ import hashlib
 import click
 import requests
 from pydub import AudioSegment
+import taglib
 from proteus import config, Model
 
 
@@ -167,7 +168,7 @@ def preview_audiofile(srcdir, destdir, filename):
     # check and update content processing status, save some pydub metadata to database
     if matching_content.processing_state != 'uploaded':
         print "WARNING: File '" + filename + "' in the uploaded folder had status '" + \
-                matching_content.processing_state +"'."
+        matching_content.processing_state + "'."
     matching_content.processing_state = 'previewed'
     matching_content.processing_hostname = HOSTNAME
     matching_content.path = filepath.replace(STORAGE_BASE_PATH + os.sep, '') # relative path
@@ -186,6 +187,30 @@ def preview_audiofile(srcdir, destdir, filename):
             matching_content.most_similiar_content = most_similar_content
     matching_content.most_similiar_artist = similiar_artist
     matching_content.most_similiar_track = similiar_track
+
+    # read metadata from file
+    try:# to append the extension from the original filename temporarily, because taglib
+        # isn't smart enough to process files without the proper extension
+        filepath_plus_extension = filepath + os.path.splitext(matching_content.name)[1]
+        os.rename(filepath, filepath_plus_extension)
+        song = taglib.File(filepath_plus_extension)
+        if song.tags:
+            matching_content.metadata_artist = str(song.tags[u"ARTIST"])
+            matching_content.metadata_title = str(song.tags[u"TITLE"])
+            matching_content.metadata_release = str(song.tags[u"ALBUM"])
+            matching_content.metadata_release_date = str(song.tags[u"TDOR"])
+            matching_content.metadata_track_number = str(song.tags[u"TRACKNUMBER"])
+        try:
+            os.rename(filepath_plus_extension, filepath)
+        except IOError:
+            print "ERROR: File '" + filepath_plus_extension + "' in the uploaded folder that was temporarily "
+            + "renamed to have a file extension to retrieve metadata from it couldn't be renamed back"
+    except IOError as e:
+        print(e)
+        print "WARNING: File '" + filename + "' in the uploaded folder couldn't be renamed "
+        + "temproarily to retrieve metadata from it"
+    #song.tags   
+
     matching_content.save()
 
     # check it the audio format is much too crappy even for 8bit enthusiasts

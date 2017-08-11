@@ -13,6 +13,7 @@ install_requires = [
     'click==6.7',
     'pyechonest',
     'pydub',
+    'pytaglib',
 ]
 test_requires = [
     'coverage',
