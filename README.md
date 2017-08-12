@@ -4,9 +4,9 @@
 This is the numbercruncher we will use for generating fingerprints for whole 
 audio files that artists have uploaded and to match monitored use of music so it 
 can be associated with artists. It uses click to run as a command line tool
-with the commands `checksum` and `fingerprint`:
+with the options like `preview`, `checksum`, or `fingerprint`.
 
-The project is in an early stage. This is the current implementation status:
+This is the current implementation status:
 
 * preview
     1. creates a smaller audio preview file
@@ -26,6 +26,16 @@ The project is in an early stage. This is the current implementation status:
     6. makes a test query before and after ingesting the print and stores statistical data (score, uniqueness factor)
     7. moves the file into `fingerprinted_path`
 
+Command Line Options
+--------------------
+* `./repro.py preview` - previews an audiofile
+* `./repro.py checksum` - hashes an audiofile
+* `./repro.py fingerprint` - fingerprints an audiofile
+* `./repro.py all` - does all the above steps with a priority on preview
+* `./repro.py loop` - repeats `all` option endlessly with 10 sec pauses in between
+
+* ./repro.py all
+
 Getting Started
 ---------------
 
@@ -43,4 +53,4 @@ Getting Started
 * setup & run c3s.ado.repertoire and get some 'uploaded' sample data from 
   ado/etc/tmp/upload after uploading some audio files
 * chown a+x repro.py
-* ./repro.py fingerprint
+* ./repro.py all
