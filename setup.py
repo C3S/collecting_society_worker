@@ -24,9 +24,9 @@ docs_requires = [
     'sphinxcontrib-plantuml==0.8.1',
 ]
 setup(
-    name='c3sFingerprinting',
+    name='c3sRepertoireProcessing',
     version='0.0',
-    description='c3sFingerprinting',
+    description='c3sRepertoireProcessing',
     long_description=README + '\n\n' + CHANGES,
     classifiers=[
         'Development Status :: 3 - Alpha',
@@ -45,7 +45,7 @@ setup(
     packages=find_packages(),
     include_package_data=True,
     zip_safe=False,
-    test_suite='c3sfingerprinting',
+    test_suite='c3srepertoireprocessing',
     install_requires=install_requires + docs_requires,
     tests_require=test_requires,
 )
