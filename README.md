@@ -40,8 +40,8 @@ Getting Started
 ---------------
 
 * sudo apt-get install libpq-dev
-* git clone git@github.com:C3S/c3sFingerprinting.git 
-* cd c3sFingerprinting
+* git clone git@github.com:C3S/c3sRepertoireProcessing.git 
+* cd c3sRepertoireProcessing
 * cp development.ini.EXAMPLE development.ini 
 * cp production.ini.EXAMPLE production.ini
 * cp config.ini.EXAMPLE config.ini
