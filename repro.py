@@ -195,11 +195,16 @@ def preview_audiofile(srcdir, destdir, filename):
         os.rename(filepath, filepath_plus_extension)
         song = taglib.File(filepath_plus_extension)
         if song.tags:
-            matching_content.metadata_artist = str(song.tags[u"ARTIST"])
-            matching_content.metadata_title = str(song.tags[u"TITLE"])
-            matching_content.metadata_release = str(song.tags[u"ALBUM"])
-            matching_content.metadata_release_date = str(song.tags[u"TDOR"])
-            matching_content.metadata_track_number = str(song.tags[u"TRACKNUMBER"])
+            if song.tags[u"ARTIST"][0]:
+                matching_content.metadata_artist = song.tags["ARTIST"][0]
+            if song.tags[u"TITLE"][0]:
+                matching_content.metadata_title = song.tags["TITLE"][0]
+            if song.tags[u"ALBUM"][0]:
+                matching_content.metadata_release = song.tags["ALBUM"][0]
+            if song.tags[u"TDOR"][0]:
+                matching_content.metadata_release_date = song.tags["TDOR"][0]
+            if song.tags[u"TRACKNUMBER"][0]:
+                matching_content.metadata_track_number = song.tags["TRACKNUMBER"][0]
         try:
             os.rename(filepath_plus_extension, filepath)
         except IOError:
@@ -669,21 +674,32 @@ def directory_walker(processing_step_func, args):
 
                     # lock file
                     try:
-                        lockfilename = os.path.join(root, audiofile)+'.lock'
+                        audiofilepath = os.path.join(root, audiofile)
+                        lockfilename = audiofilepath + '.lock'
                         lockfile = open(lockfilename, 'w+')
                         fcntl.flock(lockfile, fcntl.LOCK_EX | fcntl.LOCK_NB)
 
-                        # process file
-                        processing_step_func(root, destsubdir, audiofile)
+                        # after successful locking, make sure the audiofile is still there ...
+                        if os.path.isfile(audiofilepath):
+                            # ... and process file
+                            processing_step_func(root, destsubdir, audiofile)
 
-                    except IOError:
-                        pass
-
-                    finally:
                         # unlock file
                         fcntl.flock(lockfile, fcntl.LOCK_UN)
                         lockfile.close()
+                        #try:
                         os.remove(lockfilename)
+                        #except OSError:
+                        #    pass
+
+                    except IOError:
+                        print "XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX"
+                        print "LOCKED: " + audiofile
+                        #pass
+                    
+                    finally:
+                        if lockfile:
+                            lockfile.close()
 
     print "Finished processing " + startpath
 
