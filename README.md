@@ -8,29 +8,23 @@ with the commands `checksum` and `fingerprint`:
 
 The project is in an early stage. This is the current implementation status:
 
-* checksum
-    * implemented:
-        1. looks for files in `previewed_path` (see config.ini)
-        2. hashes it with sha256
-        3. moves it into `checksummed_path`
-        4. sets the status in the `creation` table
-    * not yet implemented:
-        1. writing of the hash to the `content` table
+* preview
+    1. creates a smaller audio preview file
+    2. cuts out a one minute excerpt from the file
+    3. retrieves metadata from the file and provides it in the content db table
+* checksum:
+    1. looks for files in `previewed_path` (see config.ini)
+    2. hashes it with sha256, both, the complete file and each 1MiB block of the file
+    3. moves it into `checksummed_path`
+    4. sets the status in the `creation` table
+    5. writes the hash to the `content` table
 * fingerprint
-        2. looks for files in `checksummed_path` (see config.ini) and uses 
-           *echoprint-codegen* to get a raw json with an audiofingerprint
-        3. fills in metadata that is missing in the json from the `content` 
-        and `creation` tables via *proteus*
-        4. sets the status in the `creation` table to *fingerprinted*
-        5. uploads ('ingests') the jsons including the fingerprints to our 
-        EchoPrint server
-        6. moves the file into `fingerprinted_path`
-    * not yet implemented:
-        1. Previewing
-        2. Updating of metadata
-
-* match
-    --> todo
+    1. looks for files in `checksummed_path` (see config.ini) and uses *echoprint-codegen* to get a raw json with an audiofingerprint
+    3. fills in metadata that is missing in the json from the `content` and `creation` tables via *proteus*
+    4. sets the status in the `creation` table to *fingerprinted*
+    5. uploads ('ingests') the jsons including the fingerprints to our EchoPrint server
+    6. makes a test query before and after ingesting the print and stores statistical data (score, uniqueness factor)
+    7. moves the file into `fingerprinted_path`
 
 Getting Started
 ---------------
