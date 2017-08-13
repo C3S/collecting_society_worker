@@ -15,9 +15,9 @@ import os
 import time
 import fcntl
 import socket
-# import shutil
 import subprocess
 import ConfigParser
+import ssl
 import json
 import datetime
 import re
@@ -27,6 +27,11 @@ import requests
 from pydub import AudioSegment
 import taglib
 from proteus import config, Model
+
+# fix for self-signed certificates
+if os.environ.get('ENVIRONMENT') == 'development':
+    if hasattr(ssl, '_create_unverified_context'):
+        ssl._create_default_https_context = ssl._create_unverified_context
 
 
 #--- some constants ---
@@ -57,8 +62,8 @@ CONFIGURATION.read("config.ini")
 PROTEUS_CONFIG = dict(CONFIGURATION.items('proteus'))
 FILEHANDLING_CONFIG = dict(CONFIGURATION.items('filehandling'))
 if not FILEHANDLING_CONFIG['echoprint_server_token']:
-    FILEHANDLING_CONFIG['echoprint_server_token'].get(
-        os.environ['ECHOPRINT_SERVER_TOKEN'], None
+    FILEHANDLING_CONFIG['echoprint_server_token'] = os.environ.get(
+        'ECHOPRINT_SERVER_TOKEN', None
     )
 HOSTNAME = socket.gethostname()
 STORAGE_BASE_PATH = FILEHANDLING_CONFIG['storage_base_path']
@@ -66,7 +71,7 @@ STORAGE_BASE_PATH = FILEHANDLING_CONFIG['storage_base_path']
 
 #  get access to database
 config.set_xmlrpc(
-    "https://"   + PROTEUS_CONFIG['user'] + ":" + PROTEUS_CONFIG['password'] + "@"
+    "https://" + PROTEUS_CONFIG['user'] + ":" + PROTEUS_CONFIG['password'] + "@"
     + PROTEUS_CONFIG['host'] + ":" + PROTEUS_CONFIG['port'] + "/" + PROTEUS_CONFIG['database']
 )
 

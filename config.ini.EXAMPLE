@@ -1,5 +1,5 @@
 [proteus]
-host     = localhost
+host     = tryton
 port     = 8069
 database = c3s
 user     = admin
