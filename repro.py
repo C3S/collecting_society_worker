@@ -32,7 +32,7 @@ from proteus import config, Model
 if os.environ.get('ENVIRONMENT') == 'development':
     if hasattr(ssl, '_create_unverified_context'):
         ssl._create_default_https_context = ssl._create_unverified_context
-        echo "WARNING: fix for self-signed certificates activated"
+        print "WARNING: fix for self-signed certificates activated"
 
 
 #--- some constants ---
