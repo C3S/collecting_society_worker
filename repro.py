@@ -60,7 +60,11 @@ _excerpt_segment_duration = 60000
 # read config from .ini
 CONFIGURATION = ConfigParser.ConfigParser()
 CONFIGURATION.read("config.ini")
-PROTEUS_CONFIG = dict(CONFIGURATION.items('proteus'))
+try:
+    PROTEUS_CONFIG = dict(CONFIGURATION.items('proteus'))
+except ConfigParser.NoSectionError:
+    print "Error: Please run repro.py from the c3sRepertoireProcessing folder."
+    exit()
 FILEHANDLING_CONFIG = dict(CONFIGURATION.items('filehandling'))
 if not FILEHANDLING_CONFIG['echoprint_server_token']:
     FILEHANDLING_CONFIG['echoprint_server_token'] = os.environ.get(
@@ -91,14 +95,14 @@ def preview_audiofile(srcdir, destdir, filename):
         print "ERROR: '" + content_base_path + "' couldn't be created as content base path."
         return
 
+    # create directories in absolute paths if needed
     previews_path = FILEHANDLING_CONFIG['previews_path']
-    if ensure_path_exists(previews_path) is None:
-        print "ERROR: '" + previews_path + "' couldn't be created for previews."
-        return
-
     excerpts_path = FILEHANDLING_CONFIG['excerpts_path']
-    if ensure_path_exists(excerpts_path) is None:
-        print "ERROR: '" + excerpts_path + "' couldn't be created for excerpts."
+    if ensure_path_exists(os.path.join(content_base_path, previews_path)) is None:
+        print "ERROR: '" + os.path.join(content_base_path, previews_path) + "' couldn't be created for previews."
+        return
+    if ensure_path_exists(os.path.join(content_base_path, excerpts_path)) is None:
+        print "ERROR: '" + os.path.join(content_base_path, excerpts_path) + "' couldn't be created for excerpts."
         return
 
     # create paths with filenames
@@ -136,8 +140,13 @@ def preview_audiofile(srcdir, destdir, filename):
     # create fringerprint from audio file using echoprint-codegen and relate to the score
     print '-' * 80
     print "test query with excerpt file " + excerpts_filepath
-    proc = subprocess.Popen(["../echoprint-codegen/echoprint-codegen", excerpts_filepath],
-                            stdout=subprocess.PIPE)
+    try:
+        proc = subprocess.Popen(["../echoprint-codegen/echoprint-codegen", excerpts_filepath],
+                                stdout=subprocess.PIPE)
+    except OSError:
+        print "Error: Unable to find echoprint-codegen executable. " + \
+            "Have you run 'make' in ado/src/echoprint-codegen/src?"
+        return
     json_meta_fp = proc.communicate()[0]
     fpcode_pos = json_meta_fp.find('"code":')
     if fpcode_pos > 0 and len(json_meta_fp) > 80:

@@ -9,7 +9,7 @@ password = admin
 # prohibit others from ingesting fingerprints into the EchoPrint server:
 echoprint_server_token=
 # here goes the static content for the web service (below are the subpaths):
-content_base_path=tmp
+content_base_path=/ado/tmp
 previews_path=previews
 excerpts_path=excerpts
 # this is the mount for the repertoire processor (below are the subpaths) 
