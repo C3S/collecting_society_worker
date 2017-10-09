@@ -5,6 +5,15 @@ database = c3s
 user     = admin
 password = admin 
 
+[archivehandling]
+# predefined constants for source an destination host
+srcuser = c3s
+srchost = localhost
+srcdir = /home/c3s/archivetest/src/dropped
+destuser = c3s
+desthost = localhost
+destdir = /home/c3s/archivetest/dest
+
 [filehandling]
 # prohibit others from ingesting fingerprints into the EchoPrint server:
 echoprint_server_token=
