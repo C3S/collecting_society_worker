@@ -23,6 +23,10 @@ def get_filename(filepath):
     slashpos = filepath.rfind("/")
     return filepath[slashpos+1:]
 
+def get_path_only(filepath):
+    slashpos = filepath.rfind("/")
+    return filepath[:slashpos-1]
+
 
 def checksum_correct(host_ssh, directory, filename):
 
@@ -31,13 +35,20 @@ def checksum_correct(host_ssh, directory, filename):
     matching_content = trytonAccess.get_content_by_filename(filename)
     bufsize = 65536
     sha256 = hashlib.sha256()
+    # when file is on remote host
     if host_ssh != "":
-        file_cont = (subprocess.check_output("ssh " + host_ssh + " 'cat "
-                     + filepath + "'"))
-        data = file_cont.read(bufsize)
-        sha256.update(data)
-        checksum = (subprocess.check_output("ssh " + host_ssh + " 'cat "
-                    + filepath + ".checksum'"))
+        try:
+            file_cont = (subprocess.check_output([
+                "ssh", host_ssh, "cat " + filepath]))
+        except:
+            print "file could not be checked"
+            return False
+        else:
+            # TODO handle remote file's content
+            # data = file_cont.read(bufsize)
+            # sha256.update(data)
+            checksum = (subprocess.check_output(["ssh", host_ssh, "cat "
+                                                + filepath + ".checksum"]))
     else:
         # generate checksum from file
         with open(filepath, 'rb') as filetohash:
@@ -47,7 +58,7 @@ def checksum_correct(host_ssh, directory, filename):
                     break
                 sha256.update(data)
         checkf = open(directory + "/" + filename + ".checksum", r)
-        # checksum = print checkf
+        #checksum = print checkf
 
     # compare
     newhash_matches_checksum = (sha256.hexdigest() == checksum)
