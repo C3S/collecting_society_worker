@@ -38,6 +38,22 @@ def get_content_by_filename(filename):
     return matching_contents[0]
 
 
+def get_creation_by_content(content):
+    """
+    Get a creation by content(.id).
+    """
+    Creation = Model.get('creation')
+    matching_creations = Creation.find(['id', "=", content.id])
+    if len(matching_creations) == 0:
+        print "ERROR: Wasn't able to find creation entry in the database with id '" + \
+              str(content.id) + "' for file '" + content.uuid + "'."
+        return None
+    if len(matching_creations) > 1:
+        print "WARNING: More than one content entry in the database for '" + content.uuid + \
+              "'. Using the first one."
+    return matching_creations[0]
+
+
 def insert_content_by_filename(filename, pstate):
     """
     insert an example content by filename/uuid.

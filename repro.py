@@ -27,6 +27,8 @@ import requests
 from pydub import AudioSegment
 import taglib
 from proteus import config, Model
+import trytonAccess
+import fileTools
 
 # fix for self-signed certificates
 if os.environ.get('ENVIRONMENT') == 'development':
@@ -126,7 +128,7 @@ def preview_audiofile(srcdir, destdir, filename):
         return
 
     # find content in database from filename
-    matching_content = get_content_by_filename(filename)
+    matching_content = trytonAccess.get_content_by_filename(filename)
     if matching_content is None:
         print "ERROR: Couldn't find content entry for '" + filename + "' in database."
         return
@@ -198,7 +200,7 @@ def preview_audiofile(srcdir, destdir, filename):
     matching_content.sample_width = int(audio.sample_width * 8)
     matching_content.pre_ingest_excerpt_score = score
     if track_id_from_test_query != None:
-        most_similar_content = get_content_by_filename(track_id_from_test_query)
+        most_similar_content = trytonAccess.get_content_by_filename(track_id_from_test_query)
         if most_similar_content is None:
             print "ERROR: Couldn't find content entry of most similar content for '" + \
             filename + "' in database. EchoPrint server seems out of sync with database."
@@ -383,7 +385,7 @@ def checksum_audiofile(srcdir, destdir, filename):
     # TO DO: check for duplicat checksums in database and possibly issue a 'checksum_collision'
 
     # find content in database from filename
-    matching_content = get_content_by_filename(filename)
+    matching_content = trytonAccess.get_content_by_filename(filename)
     if matching_content is None:
         print "ERROR: Orphaned file " + filename + " (no DB entry) -- please clean up!"
         return # shouldn't happen
@@ -437,7 +439,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     filepath = os.path.join(srcdir, filename)
 
     # get track_id and metadata from the creation via content table
-    matching_content = get_content_by_filename(filename)
+    matching_content = trytonAccess.get_content_by_filename(filename)
     if matching_content is None:
         return
 
@@ -445,7 +447,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     artist = ''
     title = ''
     release = ''
-    matching_creation = get_creation_by_content(matching_content)
+    matching_creation = trytonAccess.get_creation_by_content(matching_content)
     if matching_creation is not None:
         artist = matching_creation.artist.name
         title = matching_creation.title
@@ -591,7 +593,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     matching_content.path = filepath.replace(STORAGE_BASE_PATH + os.sep, '') # relative path
     matching_content.post_ingest_excerpt_score = score
     if track_id_from_test_query != None:
-        most_similar_content = get_content_by_filename(track_id_from_test_query)
+        most_similar_content = trytonAccess.get_content_by_filename(track_id_from_test_query)
         if most_similar_content is None:
             print "ERROR: Couldn't find content entry of most similar content for '" + \
             filename + "' in database. EchoPrint server seems out of sync with database."
@@ -631,37 +633,6 @@ def fingerprint_audiofile(srcdir, destdir, filename):
 
 
 # notiz fuer mich: von Content aus betrachtet: content.creation.licenses[n].name
-
-
-def get_content_by_filename(filename):
-    """
-    Get a content by filename/uuid.
-    """
-    Content = Model.get('content')
-    matching_contents = Content.find(['uuid', "=", filename])
-    if len(matching_contents) == 0:
-        print "ERROR: Wasn't able to find content entry in the database for '" + filename + "'."
-        return None
-    if len(matching_contents) > 1: # unlikely with uuids, but we are supersticious...
-        print "WARNING: More than one content entry in the database for '" + filename + \
-              "'. Using the first one."
-    return matching_contents[0]
-
-
-def get_creation_by_content(content):
-    """
-    Get a creation by content(.id).
-    """
-    Creation = Model.get('creation')
-    matching_creations = Creation.find(['id', "=", content.id])
-    if len(matching_creations) == 0:
-        print "ERROR: Wasn't able to find creation entry in the database with id '" + \
-              str(content.id) + "' for file '" + content.uuid + "'."
-        return None
-    if len(matching_creations) > 1:
-        print "WARNING: More than one content entry in the database for '" + content.uuid + \
-              "'. Using the first one."
-    return matching_creations[0]
 
 
 def directory_walker(processing_step_func, args):
@@ -795,9 +766,9 @@ def reject_file(source, reason, reason_details):
     # find content in database from filename
     slash_pos = filename.find(os.sep)
     if slash_pos > 0:        
-        matching_content = get_content_by_filename(filename[slash_pos+1:])
+        matching_content = trytonAccess.get_content_by_filename(filename[slash_pos+1:])
     else:
-        matching_content = get_content_by_filename(filename)
+        matching_content = trytonAccess.get_content_by_filename(filename)
     if matching_content is None:
         print "ERROR: Couldn't find content entry for '" + rejected_filepath_relative + \
               "' in database."
