@@ -51,10 +51,14 @@ class ArchProc():
                     filename + ".checksums"]
         rs = 0
         for f in srcfiles:
+            subprocess.call(["ssh", desthost_ssh, "mkdir", "-p", 
+                             aconf['destdir'] + "/" + f[:1]])
+            subprocess.call(["ssh", desthost_ssh, "mkdir", "-p", 
+                              aconf['destdir'] + "/" + f[:1] + "/" + f[1:2]])
             rsf = (subprocess.call(["rsync", srchost_ssh + ":" + srcdir_closed
-                                   + "/" + f,
-                                   desthost_ssh
-                                   + ":" + aconf['destdir']]))
+                                    + "/" + f, desthost_ssh
+                                    + ":" + aconf['destdir'] + "/"
+                                    + f[:1] + "/" + f[1:2] + "/"]))
             rs = rs + rsf
         return rs
 
