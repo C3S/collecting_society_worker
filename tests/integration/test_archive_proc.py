@@ -2,8 +2,7 @@
 # For copyright and license terms, see COPYRIGHT.rst (top level of repository)
 # Repository: ...
 
-"""
-Test the archive processing
+"""Test the archive processing
 tryton service for c3s.ado.repertoire has to be
 running and accessible to run these tests.
 """

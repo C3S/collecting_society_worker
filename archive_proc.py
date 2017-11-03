@@ -2,9 +2,7 @@
 # For copyright and license terms, see COPYRIGHT.rst (top level of repository)
 # Repository: ...
 
-"""
-The one and only C3S archive processing utility
-"""
+"""The one and only C3S archive processing utility"""
 
 import sys
 import subprocess
@@ -35,18 +33,14 @@ class ArchProc():
             return True
 
     def _list_files(self, host_ssh, directory):
-        """
-        determines files on specific host in specific dir
-        """
+        """determines files on specific host in specific dir"""
         if self._remote_path_exists(host_ssh, directory):
             lines = (subprocess.check_output(["ssh", host_ssh, "find "
                      + directory + "/ -type f -name \*"]))
             return lines
 
     def _archive_filebunch(self, filename):
-        """
-        rsync all files from source to destination host
-        """
+        """rsync all files from source to destination host"""
         srcfiles = [filename, filename + ".checksum",
                     filename + ".checksums"]
         rs = 0
@@ -90,17 +84,17 @@ class ArchProc():
         lines = self._list_files(srchost_ssh, srcdir_closed)
         filepaths = lines.split()
         for filepath in filepaths:
-            print "[path] " + filepath
+            print '[path] %s' % (filepath)
             filename = fileTools.get_filename(filepath)
             result = -1
             # get 'real files', which are not checksum files
             if not fileTools.is_checksum_file(filename):
-                print "[filename] " + filename
+                print '[filename] %s' % (filename)
                 chks = fileTools.checksum_correct(srchost_ssh, srcdir_closed,
                                                   filename)
                 objs = (trytonAccess.get_obj_state(filename) == "dropped")
-                print "[DEBUG] chks is: " + str(chks)
-                print "[DEBUG] objs is: " + str(objs)
+                print '[DEBUG] chks is: %s' % (chks)
+                print '[DEBUG] objs is: %s' % (objs)
                 # TODO: test success depending on these results
 
                 if chks and objs:
@@ -109,7 +103,7 @@ class ArchProc():
                     # move incorrect files to "unknown" folder and set state to
                     # "unknown"
                     # TODO: move files
-                    todo = "TODO"
+                    todo = 'TODO'
                     # set_content_unknown(filename)
 
             if result == 0:
@@ -134,5 +128,5 @@ class ArchProc():
                 #     # to "unknown"
                 #     # TODO: move files
                 #     todo = "TODO"
-                todo = "TODO"
+                todo = 'TODO'
                 # set_content_unknown(filename)
