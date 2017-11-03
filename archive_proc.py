@@ -23,7 +23,7 @@ aconf = dict(CONFIGURATION.items('archivehandling'))
 HOSTNAME = socket.gethostname()
 
 srchost_ssh = aconf['srcuser'] + ":" + aconf['srcpw'] + "@" + aconf['srchost']
-desthost_ssh = (aconf['destuser'] + ":" +aconf['destpw'] + "@"
+desthost_ssh = (aconf['destuser'] + ":" + aconf['destpw'] + "@"
                 + aconf['desthost'])
 srcdir_closed = aconf['srcdir'] + ".closed"
 
@@ -51,10 +51,10 @@ class ArchProc():
                     filename + ".checksums"]
         rs = 0
         for f in srcfiles:
-            subprocess.call(["ssh", desthost_ssh, "mkdir", "-p", 
+            subprocess.call(["ssh", desthost_ssh, "mkdir", "-p",
                              aconf['destdir'] + "/" + f[:1]])
-            subprocess.call(["ssh", desthost_ssh, "mkdir", "-p", 
-                              aconf['destdir'] + "/" + f[:1] + "/" + f[1:2]])
+            subprocess.call(["ssh", desthost_ssh, "mkdir", "-p",
+                             aconf['destdir'] + "/" + f[:1] + "/" + f[1:2]])
             rsf = (subprocess.call(["rsync", srchost_ssh + ":" + srcdir_closed
                                     + "/" + f, desthost_ssh
                                     + ":" + aconf['destdir'] + "/"
@@ -68,7 +68,6 @@ class ArchProc():
         for f in srcfiles:
             (subprocess.call(["ssh", srchost_ssh, "rm",
                              srcdir_closed + "/" + f]))
-
 
     def start_proc(self):
         trytonAccess.connect(pconf)
@@ -86,8 +85,8 @@ class ArchProc():
             (subprocess.call(["ssh", srchost_ssh, "mv", filepath,
                               srcdir_closed + "/" + filename]))
 
-        # rsync files to archive and delete them from .closed dir on source host
-        # when checksums are correct
+        # rsync files to archive and delete them from .closed dir on source
+        # host when checksums are correct
         lines = self._list_files(srchost_ssh, srcdir_closed)
         filepaths = lines.split()
         for filepath in filepaths:
@@ -98,7 +97,7 @@ class ArchProc():
             if not fileTools.is_checksum_file(filename):
                 print "[filename] " + filename
                 chks = fileTools.checksum_correct(srchost_ssh, srcdir_closed,
-                    filename)
+                                                  filename)
                 objs = (trytonAccess.get_obj_state(filename) == "dropped")
                 print "[DEBUG] chks is: " + str(chks)
                 print "[DEBUG] objs is: " + str(objs)
@@ -111,7 +110,7 @@ class ArchProc():
                     # "unknown"
                     # TODO: move files
                     todo = "TODO"
-                    #set_content_unknown(filename)
+                    # set_content_unknown(filename)
 
             if result == 0:
                 self._delete_src_filebunch(filename)
@@ -122,17 +121,18 @@ class ArchProc():
             if not fileTools.is_checksum_file(filename):
                 chks = fileTools.checksum_correct(srchost_ssh, srcdir_closed,
                                                   filename)
-                #if chks:
-                #    # set state to "archived"
-                #    matching_content = trytonAccess.get_content_by_filename(filename)
-                #    matching_content.processing_state = "archived"
-                #    # TODO insert archiving target name instead of "Archive"
-                #    matching_content.archive = "Archive"
-                #    matching_content.save()
-                #else:
-                #    # move incorrect files to "unknown" folder and set state to
-                #    # "unknown"
-                #    # TODO: move files
-                #    todo = "TODO"
+                # if chks:
+                #     # set state to "archived"
+                #     matching_content =
+                #         trytonAccess.get_content_by_filename(filename)
+                #     matching_content.processing_state = "archived"
+                #     # TODO insert archiving target name instead of "Archive"
+                #     matching_content.archive = "Archive"
+                #     matching_content.save()
+                # else:
+                #     # move incorrect files to "unknown" folder and set state
+                #     # to "unknown"
+                #     # TODO: move files
+                #     todo = "TODO"
                 todo = "TODO"
-                #set_content_unknown(filename)
+                # set_content_unknown(filename)
