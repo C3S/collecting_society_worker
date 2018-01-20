@@ -30,12 +30,14 @@ from proteus import config, Model
 import trytonAccess
 import fileTools
 
+# uncomment to debug with windbg:
+#import rpdb2; rpdb2.start_embedded_debugger("supersecret", fAllowRemote = True)
+
 # fix for self-signed certificates
 if os.environ.get('ENVIRONMENT') == 'development':
     if hasattr(ssl, '_create_unverified_context'):
         ssl._create_default_https_context = ssl._create_unverified_context
         print "WARNING: fix for self-signed certificates activated"
-
 
 #--- some constants ---
 
@@ -204,6 +206,7 @@ def preview_audiofile(srcdir, destdir, filename):
         if most_similar_content is None:
             print "ERROR: Couldn't find content entry of most similar content for '" + \
             filename + "' in database. EchoPrint server seems out of sync with database."
+            reject_file(filepath, 'missing_database_record', "File name: " + filepath)
         else:
             matching_content.most_similiar_content = most_similar_content
     matching_content.most_similiar_artist = similiar_artist
@@ -597,6 +600,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         if most_similar_content is None:
             print "ERROR: Couldn't find content entry of most similar content for '" + \
             filename + "' in database. EchoPrint server seems out of sync with database."
+            reject_file(filepath, 'missing_database_record', "File name: " + filepath)
         else:
             if track_id_from_test_query == matching_content.most_similiar_content.uuid:
                 matching_content.pre_ingest_excerpt_score = 0
