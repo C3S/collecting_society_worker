@@ -7,14 +7,14 @@ The one and only C3S proteus tools for accessing data in C3S tryton db
 """
 
 
-import proteus
+from proteus import config, Model
 
 
 def connect(pconfig):
     # get access to tryton database for processing state updates
     # use http only on local test instance (and uncomment [ssl] entries in
     # server side trytond.conf for using http)
-    proteus.config.set_xmlrpc(
+    config.set_xmlrpc(
         "http://" + pconfig["user"] + ":" + pconfig["password"]
         + "@" + pconfig["host"] + ":" + pconfig["port"] + "/"
         + pconfig["database"]
@@ -25,7 +25,7 @@ def get_content_by_filename(filename):
     """
     Get a content by filename/uuid.
     """
-    Content = proteus.Model.get('content')
+    Content = Model.get('content')
     matching_contents = Content.find(['uuid', "=", filename])
     if len(matching_contents) == 0:
         print "ERROR: Wasn't able to find content entry in the database" \
@@ -60,7 +60,7 @@ def insert_content_by_filename(filename, user, pstate):
     """
     insert an example content by filename/uuid.
     """
-    Content = proteus.Model.get('content')
+    Content = Model.get('content')
     new_content = Content()
     new_content.id < 0
     new_content.uuid = filename
@@ -79,7 +79,7 @@ def update_content_pstate(filename, pstate):
 
 
 def get_or_insert_web_user(email):
-    WebUser = proteus.Model.get('web.user')
+    WebUser = Model.get('web.user')
     matching_user = WebUser.find(['email', "=", email])
     if len(matching_user) == 0:
         new_user = WebUser()
@@ -90,13 +90,13 @@ def get_or_insert_web_user(email):
 
 
 def delete_web_user(email):
-    WebUser = proteus.Model.get('web.user')
+    WebUser = Model.get('web.user')
     matching_user = WebUser.find(['email', "=", email])
     # TODO: delete
 
 
 def delete_content(filename):
-    Content = proteus.Model.get('content')
+    Content = Model.get('content')
     matching_content = Content.find(['uuid', "=", filename])
     # TODO: delete
 
