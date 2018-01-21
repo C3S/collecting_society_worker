@@ -165,7 +165,7 @@ def preview_audiofile(srcdir, destdir, filename):
                                         )
         except:
             print "ERROR: '" + excerpts_filepath_relative + \
-                "' cloudn't be test-queried on the EchoPrint server."
+                "' couldn't be test-queried on the EchoPrint server."
             return
 
         print
@@ -200,7 +200,7 @@ def preview_audiofile(srcdir, destdir, filename):
     matching_content.sample_rate = int(audio.frame_rate)
     matching_content.sample_width = int(audio.sample_width * 8)
     matching_content.pre_ingest_excerpt_score = score
-    if track_id_from_test_query != None:
+    if not track_id_from_test_query:
         most_similar_content = trytonAccess.get_content_by_filename(track_id_from_test_query)
         if most_similar_content is None:
             print "ERROR: Couldn't find content entry of most similar content for '" + \
@@ -595,7 +595,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     matching_content.processing_hostname = HOSTNAME
     matching_content.path = filepath.replace(STORAGE_BASE_PATH + os.sep, '') # relative path
     matching_content.post_ingest_excerpt_score = score
-    if track_id_from_test_query != None:
+    if not track_id_from_test_query:
         most_similar_content = trytonAccess.get_content_by_filename(track_id_from_test_query)
         if most_similar_content is None:
             print "ERROR: Couldn't find content entry of most similar content for '" + \

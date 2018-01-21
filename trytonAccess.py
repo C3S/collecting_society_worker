@@ -28,7 +28,7 @@ def get_content_by_filename(filename):
     Content = Model.get('content')
     matching_contents = Content.find(['uuid', "=", filename])
     if len(matching_contents) == 0:
-        print "ERROR: Wasn't able to find content entry in the database" \
+        print "ERROR: Wasn't able to find content entry in the database " \
               "for '" + filename + "'."
         return None
     if len(matching_contents) > 1:
@@ -46,7 +46,7 @@ def get_creation_by_content(content):
     Creation = Model.get('creation')
     matching_creations = Creation.find(['id', "=", content.id])
     if len(matching_creations) == 0:
-        print "ERROR: Wasn't able to find creation entry in the database" \
+        print "ERROR: Wasn't able to find creation entry in the database " \
               "with id '" + str(content.id) + "' for file '" \
               + content.uuid + "'."
         return None
