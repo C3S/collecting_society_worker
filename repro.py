@@ -453,7 +453,8 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     if matching_creation is not None:
         artist = matching_creation.artist.name
         title = matching_creation.default_title
-        release = matching_creation.releases[0]
+        if matching_creation.releases:
+            release = matching_creation.releases[0].title
     if artist == '':
         artist = 'DummyFiFaFu'
     if title == '':
