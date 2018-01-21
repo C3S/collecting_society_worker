@@ -145,11 +145,10 @@ def preview_audiofile(srcdir, destdir, filename):
     print '-' * 80
     print "test query with excerpt file " + excerpts_filepath
     try:
-        proc = subprocess.Popen(["../echoprint-codegen/echoprint-codegen", excerpts_filepath],
+        proc = subprocess.Popen(["echoprint-codegen", excerpts_filepath],
                                 stdout=subprocess.PIPE)
     except OSError:
-        print "Error: Unable to find echoprint-codegen executable. " + \
-            "Have you run 'make' in ado/src/echoprint-codegen/src?"
+        print "Error: Unable to find echoprint-codegen executable in exe path."
         return
     json_meta_fp = proc.communicate()[0]
     fpcode_pos = json_meta_fp.find('"code":')
@@ -466,7 +465,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     if FILEHANDLING_CONFIG['echoprint_server_token']:
         print '-' * 80
         print "processing file " + filepath
-        proc = subprocess.Popen(["../echoprint-codegen/echoprint-codegen", filepath],
+        proc = subprocess.Popen(["echoprint-codegen", filepath],
                                 stdout=subprocess.PIPE)
         json_meta_fp = proc.communicate()[0]
         fpcode_pos = json_meta_fp.find('"code":')
@@ -548,7 +547,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     # create fringerprint from audio file using echoprint-codegen and relate to the score
     print '-' * 80
     print "test query with excerpt file " + excerpts_filepath
-    proc = subprocess.Popen(["../echoprint-codegen/echoprint-codegen", excerpts_filepath],
+    proc = subprocess.Popen(["echoprint-codegen", excerpts_filepath],
                             stdout=subprocess.PIPE)
     json_meta_fp = proc.communicate()[0]
     fpcode_pos = json_meta_fp.find('"code":')
