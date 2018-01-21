@@ -450,19 +450,17 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     title = ''
     release = ''
     matching_creation = trytonAccess.get_creation_by_content(matching_content)
-    if matching_creation is None:
-        reject_file(filepath, 'missing_database_record', "File name: " + filepath)
-        return
-    artist = matching_creation.artist.name
-    title = matching_creation.default_title
-    if matching_creation.releases:
-        release = matching_creation.releases[0].title
-    if artist == '':
-        artist = 'DummyFiFaFu'
-    if title == '':
-        title = 'DummyFiFaFu'
-    if release == '':
-        release = 'DummyFiFaFu'
+    if matching_creation:
+        artist = matching_creation.artist.name
+        title = matching_creation.default_title
+        if matching_creation.releases:
+            release = matching_creation.releases[0].title
+        if artist == '':
+            artist = 'DummyFiFaFu'
+        if title == '':
+            title = 'DummyFiFaFu'
+        if release == '':
+            release = 'DummyFiFaFu'
 
     # create fringerprint from audio file using echoprint-codegen
     if FILEHANDLING_CONFIG['echoprint_server_token']:
