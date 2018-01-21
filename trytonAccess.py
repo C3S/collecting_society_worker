@@ -25,6 +25,8 @@ def get_content_by_filename(filename):
     """
     Get a content by filename/uuid.
     """
+    if not filename:
+        return
     Content = Model.get('content')
     matching_contents = Content.find(['uuid', "=", filename])
     if len(matching_contents) == 0:

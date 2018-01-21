@@ -200,7 +200,7 @@ def preview_audiofile(srcdir, destdir, filename):
     matching_content.sample_rate = int(audio.frame_rate)
     matching_content.sample_width = int(audio.sample_width * 8)
     matching_content.pre_ingest_excerpt_score = score
-    if not track_id_from_test_query:
+    if track_id_from_test_query:
         most_similar_content = trytonAccess.get_content_by_filename(track_id_from_test_query)
         if most_similar_content is None:
             print "ERROR: Couldn't find content entry of most similar content for '" + \
@@ -218,15 +218,15 @@ def preview_audiofile(srcdir, destdir, filename):
         os.rename(filepath, filepath_plus_extension)
         song = taglib.File(filepath_plus_extension)
         if song.tags:
-            if song.tags[u"ARTIST"][0]:
+            if u"ARTIST" in song.tags and song.tags[u"ARTIST"][0]:
                 matching_content.metadata_artist = song.tags["ARTIST"][0]
-            if song.tags[u"TITLE"][0]:
+            if u"TITLE" in song.tags and song.tags[u"TITLE"][0]:
                 matching_content.metadata_title = song.tags["TITLE"][0]
-            if song.tags[u"ALBUM"][0]:
+            if u"ALBUM" in song.tags and song.tags[u"ALBUM"][0]:
                 matching_content.metadata_release = song.tags["ALBUM"][0]
-            if song.tags[u"TDOR"][0]:
+            if u"TDOR" in song.tags and song.tags[u"TDOR"][0]:
                 matching_content.metadata_release_date = song.tags["TDOR"][0]
-            if song.tags[u"TRACKNUMBER"][0]:
+            if u"TRACKNUMBER" in song.tags and song.tags[u"TRACKNUMBER"][0]:
                 matching_content.metadata_track_number = song.tags["TRACKNUMBER"][0]
         try:
             os.rename(filepath_plus_extension, filepath)
@@ -450,11 +450,13 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     title = ''
     release = ''
     matching_creation = trytonAccess.get_creation_by_content(matching_content)
-    if matching_creation is not None:
-        artist = matching_creation.artist.name
-        title = matching_creation.default_title
-        if matching_creation.releases:
-            release = matching_creation.releases[0].title
+    if matching_creation is None:
+        reject_file(filepath, 'missing_database_record', "File name: " + filepath)
+        return
+    artist = matching_creation.artist.name
+    title = matching_creation.default_title
+    if matching_creation.releases:
+        release = matching_creation.releases[0].title
     if artist == '':
         artist = 'DummyFiFaFu'
     if title == '':
@@ -595,7 +597,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     matching_content.processing_hostname = HOSTNAME
     matching_content.path = filepath.replace(STORAGE_BASE_PATH + os.sep, '') # relative path
     matching_content.post_ingest_excerpt_score = score
-    if not track_id_from_test_query:
+    if track_id_from_test_query:
         most_similar_content = trytonAccess.get_content_by_filename(track_id_from_test_query)
         if most_similar_content is None:
             print "ERROR: Couldn't find content entry of most similar content for '" + \
@@ -629,7 +631,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
 
     # move file to fingerprinted directory
     if move_file(filepath, destdir + os.sep + filename) is False:
-        print "ERROR: '" + filename + "' couldn't be moved to '" + destdir +"'."
+        print "ERROR: '" + filepath + "' couldn't be moved to '" + destdir + os.sep + filename +"'."
         return
 
 
@@ -677,6 +679,7 @@ def directory_walker(processing_step_func, args):
                         # after successful locking, make sure the audiofile is still there ...
                         if os.path.isfile(audiofilepath):
                             # ... and process file
+                            print "processing_step_func(root=" + root + ", destsubdir=" + destsubdir + ", audiofile=" + audiofile + ")"
                             processing_step_func(root, destsubdir, audiofile)
 
                         # unlock file
@@ -719,6 +722,7 @@ def move_file(source, target):
         #shutil.copyfile(source + ".checksums", target + ".checksums")
         #os.remove(source)
         #os.remove(source + ".checksums")
+        #print "Moving files " + source + "* to " + target + "*."
         if os.path.isfile(source + ".checksums"):
             os.rename(source + ".checksums", target + ".checksums")
         if os.path.isfile(source + ".checksum"):
@@ -749,9 +753,9 @@ def reject_file(source, reason, reason_details):
     if not os.path.isfile(source):
         return False
 
-    content_base_path = FILEHANDLING_CONFIG['content_base_path']
-    if ensure_path_exists(content_base_path) is None:
-        print "ERROR: '" + content_base_path + "' couldn't be created as content base path."
+    storage_base_path = FILEHANDLING_CONFIG['storage_base_path']
+    if ensure_path_exists(storage_base_path) is None:
+        print "ERROR: '" + storage_base_path + "' couldn't be created as content base path."
         return
 
     rejected_path = FILEHANDLING_CONFIG['rejected_path']
@@ -761,7 +765,7 @@ def reject_file(source, reason, reason_details):
 
     filename = os.sep.join(source.rsplit(os.sep, 2)[-2:])  # get user-id/filename from source path
     rejected_filepath_relative = os.path.join(rejected_path, filename)
-    rejected_filepath = os.path.join(content_base_path, rejected_filepath_relative)
+    rejected_filepath = os.path.join(storage_base_path, rejected_filepath_relative)
 
     move_file(source, rejected_filepath)
 
