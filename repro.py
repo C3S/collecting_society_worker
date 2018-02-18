@@ -58,28 +58,28 @@ _excerpt_fadeout = 0
 _excerpt_segment_duration = 60000
 
 
-#--- some initialization ---
+# --- some initialization ---
+
+def expand_envvars(section):
+    return dict(
+        (k, os.path.expandvars(v)) for k, v in section.iteritems()
+    )
 
 
 # read config from .ini
 CONFIGURATION = ConfigParser.ConfigParser()
 CONFIGURATION.read("config.ini")
 try:
-    PROTEUS_CONFIG = dict(CONFIGURATION.items('proteus'))
+    PROTEUS_CONFIG = expand_envvars(dict(CONFIGURATION.items('proteus')))
 except ConfigParser.NoSectionError:
     print "Error: Please run repro.py from the c3sRepertoireProcessing folder."
     exit()
-FILEHANDLING_CONFIG = dict(CONFIGURATION.items('filehandling'))
-if not FILEHANDLING_CONFIG['echoprint_server_token']:
-    FILEHANDLING_CONFIG['echoprint_server_token'] = os.environ.get(
-        'ECHOPRINT_SERVER_TOKEN', None
-    )
+FILEHANDLING_CONFIG = expand_envvars(dict(CONFIGURATION.items('filehandling')))
 if (FILEHANDLING_CONFIG['echoprint_server_token'] == ''
         or not FILEHANDLING_CONFIG['echoprint_server_token']):
     print "WARNING: echoprint_server_token not set in config.ini!"
 HOSTNAME = socket.gethostname()
 STORAGE_BASE_PATH = FILEHANDLING_CONFIG['storage_base_path']
-
 
 #  get access to database
 config.set_xmlrpc(
@@ -88,7 +88,7 @@ config.set_xmlrpc(
 )
 
 
-#--- Processing stage functions for single audiofiles ---
+# --- Processing stage functions for single audiofiles ---
 
 
 def preview_audiofile(srcdir, destdir, filename):
