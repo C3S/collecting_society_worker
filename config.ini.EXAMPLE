@@ -17,7 +17,7 @@ destdir = /home/c3s/archivetest/dest
 [filehandling]
 # prohibit others from ingesting fingerprints into the EchoPrint server:
 # (look on the echoprint server API/api.py in class ingest, line 42)
-echoprint_server_token=
+echoprint_server_token=${ECHOPRINT_SERVER_TOKEN}
 # here goes the static content for the web service (below are the subpaths)
 # this path needs to correspond wiht API_C3SUPLOAD_FILEPATH in api.env!
 content_base_path=/ado/tmp/upload
