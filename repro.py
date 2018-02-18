@@ -434,6 +434,7 @@ def checksum_audiofile(srcdir, destdir, filename):
     checksum_to_use.end = filelength
     checksum_to_use.save()
 
+
 def fingerprint_audiofile(srcdir, destdir, filename):
     """
     Audiofingerprint a single file.
@@ -639,6 +640,35 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         return
 
 
+def drop_audiofile(srcdir, destdir, filename):
+    """
+    Does nothing but setting the processing step from fingerprinted to dropped.
+    """
+
+    filepath = os.path.join(srcdir, filename)
+
+    # find content in database from filename
+    matching_content = trytonAccess.get_content_by_filename(filename)
+    if matching_content is None:
+        print "ERROR: Orphaned file " + filename + " (no DB entry) -- rejecting!"
+        reject_file(filepath, 'missing_database_record', "There was no content database record for " + filename)
+        return # shouldn't normally happen
+
+    # move file to checksummed directory
+    if move_file(filepath, destdir + os.sep + filename) is False:
+        print "ERROR: '" + filename + "' couldn't be moved to '" + destdir +"'."
+        return
+
+    # check and update content processing status
+    if matching_content.processing_state != 'fingerprinted':
+        print "WARNING: File '" + filename + "' in the fingerprinted folder had status '" + \
+                matching_content.processing_state +"'."
+    matching_content.processing_state = 'dropped'
+    matching_content.processing_hostname = HOSTNAME
+    matching_content.path = filepath.replace(STORAGE_BASE_PATH + os.sep, '') # relative path
+    matching_content.save()
+
+
 #--- Helper functions ---
 
 
@@ -683,7 +713,7 @@ def directory_walker(processing_step_func, args):
                         # after successful locking, make sure the audiofile is still there ...
                         if os.path.isfile(audiofilepath):
                             # ... and process file
-                            print "processing_step_func(root=" + root + ", destsubdir=" + destsubdir + ", audiofile=" + audiofile + ")"
+                            #print "processing_step_func(root=" + root + ", destsubdir=" + destsubdir + ", audiofile=" + audiofile + ")"
                             processing_step_func(root, destsubdir, audiofile)
 
                         # unlock file
@@ -704,10 +734,6 @@ def directory_walker(processing_step_func, args):
                             lockfile.close()
 
     print "Finished processing " + startpath
-
-# TO DO: move file to rejected folder and set rejected reason
-#def reject_file(filename, reason):
-#    move_file(filename, )
 
 
 def move_file(source, target):
@@ -842,6 +868,21 @@ def fingerprint():
                                                           FILEHANDLING_CONFIG['fingerprinted_path'])))
 
 
+@repro.command('drop')
+#@click.pass_context
+def drop():
+    """
+    Get files from fingerprinted_path and 'drop' them for archiving.
+
+    This command does nothing with the files and is rather a mere abstraction
+    in case there will at some point be another processing step after fingerprint.
+    """
+    directory_walker(drop_audiofile, (os.path.join(STORAGE_BASE_PATH,
+                                                          FILEHANDLING_CONFIG['fingerprinted_path']),
+                                             os.path.join(STORAGE_BASE_PATH,
+                                                          FILEHANDLING_CONFIG['dropped_path'])))
+
+
 @repro.command('match')
 #@click.pass_context
 def match(): # code
@@ -873,6 +914,7 @@ def all(ctx):
     ctx.invoke(checksum)
     ctx.invoke(preview)
     ctx.invoke(fingerprint)
+    ctx.invoke(drop)
     ctx.invoke(preview)
 
 
