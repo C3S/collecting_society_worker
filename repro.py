@@ -30,7 +30,7 @@ from proteus import config, Model
 import trytonAccess
 import fileTools
 
-# uncomment to debug with windbg:
+# uncomment to debug with windbg: 
 #import rpdb2; rpdb2.start_embedded_debugger("supersecret", fAllowRemote = True)
 
 # fix for self-signed certificates
@@ -74,6 +74,9 @@ if not FILEHANDLING_CONFIG['echoprint_server_token']:
     FILEHANDLING_CONFIG['echoprint_server_token'] = os.environ.get(
         'ECHOPRINT_SERVER_TOKEN', None
     )
+if (FILEHANDLING_CONFIG['echoprint_server_token'] == ''
+        or not FILEHANDLING_CONFIG['echoprint_server_token']):
+    print "WARNING: echoprint_server_token not set in config.ini!"
 HOSTNAME = socket.gethostname()
 STORAGE_BASE_PATH = FILEHANDLING_CONFIG['storage_base_path']
 
@@ -98,10 +101,10 @@ def preview_audiofile(srcdir, destdir, filename):
     if ensure_path_exists(content_base_path) is None:
         print "ERROR: '" + content_base_path + "' couldn't be created as content base path."
         return
-
+    
     # create directories in absolute paths if needed
-    previews_path = FILEHANDLING_CONFIG['previews_path']
-    excerpts_path = FILEHANDLING_CONFIG['excerpts_path']
+    previews_path = os.path.join(FILEHANDLING_CONFIG['previews_path'], filename[0], filename[1])
+    excerpts_path = os.path.join(FILEHANDLING_CONFIG['excerpts_path'], filename[0], filename[1])
     if ensure_path_exists(os.path.join(content_base_path, previews_path)) is None:
         print "ERROR: '" + os.path.join(content_base_path, previews_path) + "' couldn't be created for previews."
         return
@@ -133,6 +136,7 @@ def preview_audiofile(srcdir, destdir, filename):
     matching_content = trytonAccess.get_content_by_filename(filename)
     if matching_content is None:
         print "ERROR: Couldn't find content entry for '" + filename + "' in database."
+        reject_file(filepath, 'missing_database_record', "File name: " + filepath)
         return
 
     # do a first test query on the EchoPrint server (2nd one after ingest)
@@ -194,7 +198,7 @@ def preview_audiofile(srcdir, destdir, filename):
     matching_content.processing_state = 'previewed'
     matching_content.processing_hostname = HOSTNAME
     matching_content.path = filepath.replace(STORAGE_BASE_PATH + os.sep, '') # relative path
-    matching_content.preview_path = previews_filepath_relative
+    matching_content.preview_path = previews_filepath
     matching_content.length = int(audio.duration_seconds)
     matching_content.channels = int(audio.channels)
     matching_content.sample_rate = int(audio.frame_rate)
@@ -204,8 +208,7 @@ def preview_audiofile(srcdir, destdir, filename):
         most_similar_content = trytonAccess.get_content_by_filename(track_id_from_test_query)
         if most_similar_content is None:
             print "ERROR: Couldn't find content entry of most similar content for '" + \
-            filename + "' in database. EchoPrint server seems out of sync with database."
-            reject_file(filepath, 'missing_database_record', "File name: " + filepath)
+            filename + "' in database. EchoPrint server seems out of sync with database."            
         else:
             matching_content.most_similiar_content = most_similar_content
     matching_content.most_similiar_artist = similiar_artist
@@ -613,12 +616,15 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     matching_users = user.find(['login', '=', 'admin'])
     if not matching_users:
         return
-
+    
     new_logentry.user = matching_users[0]
     new_logentry.content = matching_content
     new_logentry.timestamp = datetime.datetime.now()
     new_logentry.fingerprinting_algorithm = 'EchoPrint'
-    new_logentry.fingerprinting_version = str(meta_fp[0]['metadata']['version'])
+    if fpcode_pos > 0 and len(json_meta_fp) > 80:
+        new_logentry.fingerprinting_version = str(meta_fp[0]['metadata']['version'])
+    else:
+        new_logentry.fingerprinting_version = "unknown (check if echoprint access token was set properly!)"    
     new_logentry.save()
 
     # TO DO: check newly ingested fingerprint using the excerpt
@@ -767,7 +773,7 @@ def reject_file(source, reason, reason_details):
 
     move_file(source, rejected_filepath)
 
-    # TO-DO: cleanup possible preview and excerpt files
+    # TODO: cleanup possible preview and excerpt files
 
     # find content in database from filename
     slash_pos = filename.find(os.sep)
@@ -776,8 +782,9 @@ def reject_file(source, reason, reason_details):
     else:
         matching_content = trytonAccess.get_content_by_filename(filename)
     if matching_content is None:
-        print "ERROR: Couldn't find content entry for '" + rejected_filepath_relative + \
-              "' in database."
+        #print "ERROR: Couldn't find content entry for '" + rejected_filepath_relative + \
+        #      "' in database. But no problem: I'm about to reject the file anyway..."
+        pass
         return
 
     # check and update content processing status, save some pydub metadata to database
