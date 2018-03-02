@@ -82,11 +82,14 @@ HOSTNAME = socket.gethostname()
 STORAGE_BASE_PATH = FILEHANDLING_CONFIG['storage_base_path']
 
 #  get access to database
-config.set_xmlrpc(
-    "https://" + PROTEUS_CONFIG['user'] + ":" + PROTEUS_CONFIG['password'] + "@"
-    + PROTEUS_CONFIG['host'] + ":" + PROTEUS_CONFIG['port'] + "/" + PROTEUS_CONFIG['database']
-)
-
+try:
+    config.set_xmlrpc(
+        "https://" + PROTEUS_CONFIG['user'] + ":" + PROTEUS_CONFIG['password'] + "@"
+        + PROTEUS_CONFIG['host'] + ":" + PROTEUS_CONFIG['port'] + "/" + PROTEUS_CONFIG['database']
+    )
+except:
+    print "Database connection could not be established (yet), skipping file processing ..."
+    exit()
 
 # --- Processing stage functions for single audiofiles ---
 
