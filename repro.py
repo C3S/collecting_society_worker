@@ -222,18 +222,21 @@ def preview_audiofile(srcdir, destdir, filename):
         # isn't smart enough to process files without the proper extension
         filepath_plus_extension = filepath + os.path.splitext(matching_content.name)[1]
         os.rename(filepath, filepath_plus_extension)
-        song = taglib.File(filepath_plus_extension)
-        if song.tags:
-            if u"ARTIST" in song.tags and song.tags[u"ARTIST"][0]:
-                matching_content.metadata_artist = song.tags["ARTIST"][0]
-            if u"TITLE" in song.tags and song.tags[u"TITLE"][0]:
-                matching_content.metadata_title = song.tags["TITLE"][0]
-            if u"ALBUM" in song.tags and song.tags[u"ALBUM"][0]:
-                matching_content.metadata_release = song.tags["ALBUM"][0]
-            if u"TDOR" in song.tags and song.tags[u"TDOR"][0]:
-                matching_content.metadata_release_date = song.tags["TDOR"][0]
-            if u"TRACKNUMBER" in song.tags and song.tags[u"TRACKNUMBER"][0]:
-                matching_content.metadata_track_number = song.tags["TRACKNUMBER"][0]
+        try:
+            song = taglib.File(filepath_plus_extension)
+            if song.tags:
+                if u"ARTIST" in song.tags and song.tags[u"ARTIST"][0]:
+                    matching_content.metadata_artist = song.tags["ARTIST"][0]
+                if u"TITLE" in song.tags and song.tags[u"TITLE"][0]:
+                    matching_content.metadata_title = song.tags["TITLE"][0]
+                if u"ALBUM" in song.tags and song.tags[u"ALBUM"][0]:
+                    matching_content.metadata_release = song.tags["ALBUM"][0]
+                if u"TDOR" in song.tags and song.tags[u"TDOR"][0]:
+                    matching_content.metadata_release_date = song.tags["TDOR"][0]
+                if u"TRACKNUMBER" in song.tags and song.tags[u"TRACKNUMBER"][0]:
+                    matching_content.metadata_track_number = song.tags["TRACKNUMBER"][0]
+        except OSError:
+            print "WARNING: taglib couldn't extract any metadata from file '" + filepath_plus_extension + "' "
         try:
             os.rename(filepath_plus_extension, filepath)
         except IOError:
