@@ -7,7 +7,7 @@ The one and only C3S repertoire processing utility
 """
 
 
-#--- Imports ---
+# --- Imports ---
 
 
 import sys
@@ -84,8 +84,9 @@ STORAGE_BASE_PATH = FILEHANDLING_CONFIG['storage_base_path']
 #  get access to database
 try:
     config.set_xmlrpc(
-        "https://" + PROTEUS_CONFIG['user'] + ":" + PROTEUS_CONFIG['password'] + "@"
-        + PROTEUS_CONFIG['host'] + ":" + PROTEUS_CONFIG['port'] + "/" + PROTEUS_CONFIG['database']
+        "https://" + PROTEUS_CONFIG['user'] + ":" + PROTEUS_CONFIG['password']
+        + "@" + PROTEUS_CONFIG['host'] + ":" + PROTEUS_CONFIG['port'] + "/"
+        + PROTEUS_CONFIG['database']
     )
 except:
     print "Database connection could not be established (yet), skipping file processing ..."
