@@ -20,10 +20,18 @@ pconf = dict(CONFIGURATION.items('proteus'))
 aconf = dict(CONFIGURATION.items('archivehandling'))
 HOSTNAME = socket.gethostname()
 
-srchost_ssh = aconf['srcuser'] + ":" + aconf['srcpw'] + "@" + aconf['srchost']
-desthost_ssh = (aconf['destuser'] + ":" + aconf['destpw'] + "@"
-                + aconf['desthost'])
-srcdir_closed = aconf['srcdir'] + ".closed"
+try:
+    srchost_ssh = (aconf['srcuser'] + ":" + aconf['srcpw'] + "@"
+                   + aconf['srchost'])
+    desthost_ssh = (aconf['destuser'] + ":" + aconf['destpw'] + "@"
+                    + aconf['desthost'])
+    srcdir_closed = aconf['srcdir'] + ".closed"
+except KeyError as e:
+    print("Please edit [archivehandling] section in your config.ini: '%s'"
+          % str(e))
+    exit()
+
+print("Archiving...")
 
 
 class ArchProc():

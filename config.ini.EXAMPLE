@@ -8,9 +8,11 @@ password = admin
 [archivehandling]
 # predefined constants for source an destination host
 srcuser = c3s
+srcpw = c3s_secretpassword_on_srchost_PLEASE_CHANGE!
 srchost = localhost
 srcdir = /home/c3s/archivetest/src/dropped
 destuser = c3s
+destpw = c3s_secretpassword_on_desthost_PLEASE_CHANGE!
 desthost = localhost
 destdir = /home/c3s/archivetest/dest
 
