@@ -666,6 +666,13 @@ def drop_audiofile(srcdir, destdir, filename):
         print "ERROR: '" + filename + "' couldn't be moved to '" + destdir +"'."
         return
 
+    # overwrite file content with its filename (so it generates different hash values)
+    if FILEHANDLING_CONFIG['disembody_dropped_files'] == 'yes':
+        overwritefile = open(destdir + os.sep + filename, 'w+')
+        if (overwritefile is not None):
+            overwritefile.write(filename)
+        overwritefile.close()
+
     # check and update content processing status
     if matching_content.processing_state != 'fingerprinted':
         print "WARNING: File '" + filename + "' in the fingerprinted folder had status '" + \

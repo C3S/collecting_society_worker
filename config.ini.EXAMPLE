@@ -17,6 +17,9 @@ desthost = localhost
 destdir = /home/c3s/archivetest/dest
 
 [filehandling]
+# reduces filesize of dropped files by replacing their content with the filename
+# set to yes for test purposes to save space on test machine
+disembody_dropped_files=no
 # prohibit others from ingesting fingerprints into the EchoPrint server:
 # (look on the echoprint server API/api.py in class ingest, line 42)
 echoprint_server_token=${ECHOPRINT_SERVER_TOKEN}
