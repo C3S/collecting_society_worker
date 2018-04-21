@@ -37,7 +37,7 @@ import fileTools
 if os.environ.get('ENVIRONMENT') == 'development':
     if hasattr(ssl, '_create_unverified_context'):
         ssl._create_default_https_context = ssl._create_unverified_context
-        print "WARNING: fix for self-signed certificates activated"
+        # print "WARNING: fix for self-signed certificates activated"
 
 #--- some constants ---
 
@@ -700,7 +700,8 @@ def directory_walker(processing_step_func, args):
 
     startpath = args[0]
     destdir = args[1]
-    print "Processing " + startpath
+    processing_message = "Processing " + startpath
+    processing_did_some_work = False
     if ensure_path_exists(destdir) is None:
         print "ERROR: '" + destdir + "' couldn't be created."
         return
@@ -727,7 +728,8 @@ def directory_walker(processing_step_func, args):
                         # after successful locking, make sure the audiofile is still there ...
                         if os.path.isfile(audiofilepath):
                             # ... and process file
-                            #print "processing_step_func(root=" + root + ", destsubdir=" + destsubdir + ", audiofile=" + audiofile + ")"
+                            print(processing_message)
+                            processing_did_some_work = True
                             processing_step_func(root, destsubdir, audiofile)
 
                         # unlock file
@@ -747,7 +749,8 @@ def directory_walker(processing_step_func, args):
                         if lockfile:
                             lockfile.close()
 
-    print "Finished processing " + startpath
+    if processing_did_some_work:
+        print("Finished processing " + startpath)
 
 
 def move_file(source, target):
