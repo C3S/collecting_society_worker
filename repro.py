@@ -531,8 +531,8 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         
         if ingest_request.status_code != 200:
             reject_file(filepath, 'no_fingerprint', "Could not be sent to EchoPrint server response code " + \
-                        ingest_request.status_code + ': ' + ingest_request.reason)
-            print "ERROR: '" + srcdir + "' cloudn't be ingested into the EchoPrint server."
+                        str(ingest_request.status_code) + ': ' + ingest_request.reason)
+            print "ERROR: '" + srcdir + "' cloudn't be ingested into the EchoPrint server. File rejected."
             return
 
     # do a 2nd test query on the EchoPrint server (1st was before ingest, during preview)
