@@ -604,7 +604,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     matching_creation = trytonAccess.get_creation_by_content(matching_content)
     if matching_creation:
         artist = matching_creation.artist.name
-        title = matching_creation.default_title
+        title = matching_creation.title
         if matching_creation.releases:
             release = matching_creation.releases[0].title
         if artist == '':
