@@ -118,7 +118,7 @@ def preview_audiofile(srcdir, destdir, filename):
     content_base_path = FILEHANDLING_CONFIG['content_base_path']
     if ensure_path_exists(content_base_path) is None:
         print("ERROR: '" + content_base_path +
-              "' couldn't be created as content base path.")
+            "' couldn't be created as content base path.")
         return
 
     # create directories in absolute paths if needed
@@ -134,8 +134,8 @@ def preview_audiofile(srcdir, destdir, filename):
             os.path.join(content_base_path, previews_path)
     ) is None:
         print("ERROR: '" +
-              os.path.join(content_base_path, previews_path) +
-              "' couldn't be created for previews.")
+            os.path.join(content_base_path, previews_path) +
+            "' couldn't be created for previews.")
         return
     if ensure_path_exists(
             os.path.join(content_base_path, excerpts_path)
@@ -157,21 +157,6 @@ def preview_audiofile(srcdir, destdir, filename):
         content_base_path,
         excerpts_filepath_relative)
 
-    # create preview
-    audio = AudioSegment.from_file(filepath)
-    result = create_preview(audio, previews_filepath)
-    if not result:
-        print("ERROR: '" + filename + "' couldn't be previewed.")
-        return
-
-    # create excerpt
-    result = create_excerpt(audio, excerpts_filepath)
-    if not result:
-        print(
-            "ERROR: No excerpt could be cut out of '" +
-            filename + "'.")
-        return
-
     # find content in database from filename
     matching_content = trytonAccess.get_content_by_filename(filename)
     if matching_content is None:
@@ -186,186 +171,202 @@ def preview_audiofile(srcdir, destdir, filename):
             filepath)
         return
 
-    # do a first test query on the EchoPrint server (2nd one after ingest)
-    score = 0
-    track_id_from_test_query = None
-    similiar_artist = ''
-    similiar_track = ''
-
-    # create fringerprint from audio file
-    # using echoprint-codegen and relate to the score
-    print('-' * 80)
-    print("test query with excerpt file " + excerpts_filepath)
-    try:
-        proc = subprocess.Popen(["echoprint-codegen", excerpts_filepath],
-                                stdout=subprocess.PIPE)
-    except OSError:
-        print(
-            "Error: Unable to find echoprint-codegen executable in exe path.")
-        return
-    json_meta_fp = proc.communicate()[0]
-    fpcode_pos = json_meta_fp.find('"code":')
-    if fpcode_pos > 0 and len(json_meta_fp) > 80:
-        print(
-            "Got from codegen:" +
-            json_meta_fp[:fpcode_pos+40] +
-            "....." + json_meta_fp[-40:])
-
-        meta_fp = json.loads(json_meta_fp)
-
-        try:
-            query_request = requests.get(
-                "https://echoprint.c3s.cc/query?fp_code=" +
-                meta_fp[0]['code'].encode('utf8'),
-                verify=False,  # TO DO: remove when cert. is updated
-            )
-        except:
-            print(
-                "ERROR: '" + excerpts_filepath_relative +
-                "' couldn't be test-queried on the EchoPrint server.")
+    if matching_content.category == 'audio':
+        # create preview
+        audio = AudioSegment.from_file(filepath)
+        result = create_preview(audio, previews_filepath)
+        if not result:
+            print("ERROR: '" + filename + "' couldn't be previewed.")
             return
 
-        print
-        print(
-            "Server response: ",
-            query_request.status_code,
-            query_request.reason)
-        print
-        print(
-            "Body: " +
-            (query_request.text[:500] +
-             '...' + query_request.text[-1500:]
-             if len(query_request.text) > 2000 else query_request.text)
-        )
-
-        if query_request.status_code != 200:
+        # create excerpt
+        result = create_excerpt(audio, excerpts_filepath)
+        if not result:
             print(
-                "ERROR: '" +
-                srcdir +
-                "' cloudn't be test-queried on the EchoPrint server.")
-        else:
-            qresult = json.loads(query_request.text)
-            score = qresult['score']
-            if qresult['match']:
-                track_id_from_test_query = (
-                    qresult['track_id'][:8] +
-                    '-' +
-                    qresult['track_id'][8:12] +
-                    '-' +
-                    qresult['track_id'][12:16] +
-                    '-' +
-                    qresult['track_id'][16:]
-                )
-                similiar_artist = qresult['artist']
-                similiar_track = qresult['track']
-    else:
-        print("Got from codegen:" + json_meta_fp)
+                "ERROR: No excerpt could be cut out of '" +
+                filename + "'.")
+            return
 
-    # check and update content processing status,
-    # save some pydub metadata to database
-    if matching_content.processing_state != 'uploaded':
-        print(
-            "WARNING: File '" +
-            filename +
-            "' in the uploaded folder had status '" +
-            matching_content.processing_state +
-            "'.")
-    matching_content.processing_state = 'previewed'
-    matching_content.processing_hostname = HOSTNAME
-    matching_content.path = filepath.replace(
-        STORAGE_BASE_PATH +
-        os.sep, '')  # relative path
-    matching_content.preview_path = previews_filepath
-    matching_content.length = int(audio.duration_seconds)
-    matching_content.channels = int(audio.channels)
-    matching_content.sample_rate = int(audio.frame_rate)
-    matching_content.sample_width = int(audio.sample_width * 8)
-    matching_content.pre_ingest_excerpt_score = score
-    if track_id_from_test_query:
-        most_similar_content = trytonAccess.get_content_by_filename(
-            track_id_from_test_query)
-        if most_similar_content is None:
-            print(
-                "ERROR: Couldn't find content entry " +
-                "of most similar content for '" +
-                filename +
-                "' in database. EchoPrint server seems " +
-                "out of sync with database."
-            )
-        else:
-            matching_content.most_similiar_content = most_similar_content
-    matching_content.most_similiar_artist = similiar_artist
-    matching_content.most_similiar_track = similiar_track
+        # do a first test query on the EchoPrint server (2nd one after ingest)
+        score = 0
+        track_id_from_test_query = None
+        similiar_artist = ''
+        similiar_track = ''
 
-    # read metadata from file
-    try:  # to append the extension from the original filename temporarily,
-        # because taglib
-        # isn't smart enough to process files without the proper extension
-        filepath_plus_extension = filepath + os.path.splitext(
-            matching_content.name)[1]
-        os.rename(filepath, filepath_plus_extension)
+        # create fingerprint from audio file
+        # using echoprint-codegen and relate to the score
+        print('-' * 80)
+        print("test query with excerpt file " + excerpts_filepath)
         try:
-            song = taglib.File(filepath_plus_extension)
-            if song.tags:
-                if u"ARTIST" in song.tags and song.tags[u"ARTIST"][0]:
-                    matching_content.metadata_artist = song.tags["ARTIST"][0]
-                if u"TITLE" in song.tags and song.tags[u"TITLE"][0]:
-                    matching_content.metadata_title = song.tags["TITLE"][0]
-                if u"ALBUM" in song.tags and song.tags[u"ALBUM"][0]:
-                    matching_content.metadata_release = song.tags["ALBUM"][0]
-                if u"TDOR" in song.tags and song.tags[u"TDOR"][0]:
-                    matching_content.metadata_release_date = song.tags[
-                        "TDOR"][0]
-                if (
-                        u"TRACKNUMBER" in song.tags and
-                        song.tags[u"TRACKNUMBER"][0]
-                ):
-                    matching_content.metadata_track_number = song.tags[
-                        "TRACKNUMBER"][0]
+            proc = subprocess.Popen(["echoprint-codegen", excerpts_filepath],
+                                    stdout=subprocess.PIPE)
         except OSError:
             print(
-                "WARNING: taglib couldn't extract any metadata from file '" +
-                filepath_plus_extension +
-                "' "
-            )
-        try:
-            os.rename(filepath_plus_extension, filepath)
-        except IOError:
+                "Error: Unable to find echoprint-codegen executable in exe path.")
+            return
+        json_meta_fp = proc.communicate()[0]
+        fpcode_pos = json_meta_fp.find('"code":')
+        if fpcode_pos > 0 and len(json_meta_fp) > 80:
             print(
-                "ERROR: File '" +
-                filepath_plus_extension +
-                "' in the uploaded folder that was temporarily " +
-                "renamed to have a file extension " +
-                "to retrieve metadata from it couldn't be renamed back")
-    except IOError as e:
-        print(e)
-        print(
-            "WARNING: File '" +
-            filename +
-            "' in the uploaded folder couldn't be renamed " +
-            "temproarily to retrieve metadata from it")
-    # song.tags
+                "Got from codegen:" +
+                json_meta_fp[:fpcode_pos+40] +
+                "....." + json_meta_fp[-40:])
 
-    matching_content.save()
+            meta_fp = json.loads(json_meta_fp)
 
-    # check it the audio format is much too crappy even for 8bit enthusiasts
-    reason_details = ''
-    if audio.frame_rate < 11025:
-        reason_details = (
-            'Invalid frame rate of ' +
-            str(int(audio.frame_rate)) +
-            ' Hz')
-    if audio.sample_width < 1:
-        # less than one byte? is this even possible? :-p
-        reason_details = (
-            'Invalid sample rate of ' +
-            str(int(audio.sample_width * 8)) +
-            ' bits')
-    if reason_details != '':
-        reject_file(filepath, 'format_error', reason_details)
-        return
+            try:
+                query_request = requests.get(
+                    "https://echoprint.c3s.cc/query?fp_code=" +
+                    meta_fp[0]['code'].encode('utf8'),
+                    verify=False,  # TO DO: remove when cert. is updated
+                )
+            except:
+                print(
+                    "ERROR: '" + excerpts_filepath_relative +
+                    "' couldn't be test-queried on the EchoPrint server.")
+                return
 
-    # move file to checksummed directory
+            print
+            print(
+                "Server response: ",
+                query_request.status_code,
+                query_request.reason)
+            print
+            print(
+                "Body: " +
+                (query_request.text[:500] +
+                '...' + query_request.text[-1500:]
+                if len(query_request.text) > 2000 else query_request.text)
+            )
+
+            if query_request.status_code != 200:
+                print(
+                    "ERROR: '" +
+                    srcdir +
+                    "' cloudn't be test-queried on the EchoPrint server.")
+            else:
+                qresult = json.loads(query_request.text)
+                score = qresult['score']
+                if qresult['match']:
+                    track_id_from_test_query = (
+                        qresult['track_id'][:8] +
+                        '-' +
+                        qresult['track_id'][8:12] +
+                        '-' +
+                        qresult['track_id'][12:16] +
+                        '-' +
+                        qresult['track_id'][16:]
+                    )
+                    similiar_artist = qresult['artist']
+                    similiar_track = qresult['track']
+        else:
+            print("Got from codegen:" + json_meta_fp)
+
+        # check and update content processing status,
+        # save some pydub metadata to database
+        if matching_content.processing_state != 'uploaded':
+            print(
+                "WARNING: File '" +
+                filename +
+                "' in the uploaded folder had status '" +
+                matching_content.processing_state +
+                "'.")
+        matching_content.processing_state = 'previewed'
+        matching_content.processing_hostname = HOSTNAME
+        matching_content.path = filepath.replace(
+            STORAGE_BASE_PATH +
+            os.sep, '')  # relative path
+        matching_content.preview_path = previews_filepath
+        matching_content.length = int(audio.duration_seconds)
+        matching_content.channels = int(audio.channels)
+        matching_content.sample_rate = int(audio.frame_rate)
+        matching_content.sample_width = int(audio.sample_width * 8)
+        matching_content.pre_ingest_excerpt_score = score
+        if track_id_from_test_query:
+            most_similar_content = trytonAccess.get_content_by_filename(
+                track_id_from_test_query)
+            if most_similar_content is None:
+                print(
+                    "ERROR: Couldn't find content entry " +
+                    "of most similar content for '" +
+                    filename +
+                    "' in database. EchoPrint server seems " +
+                    "out of sync with database."
+                )
+            else:
+                matching_content.most_similiar_content = most_similar_content
+        matching_content.most_similiar_artist = similiar_artist
+        matching_content.most_similiar_track = similiar_track
+
+        # read metadata from file
+        try:  # to append the extension from the original filename temporarily,
+            # because taglib
+            # isn't smart enough to process files without the proper extension
+            filepath_plus_extension = filepath + os.path.splitext(
+                matching_content.name)[1]
+            os.rename(filepath, filepath_plus_extension)
+            try:
+                song = taglib.File(filepath_plus_extension)
+                if song.tags:
+                    if u"ARTIST" in song.tags and song.tags[u"ARTIST"][0]:
+                        matching_content.metadata_artist = song.tags["ARTIST"][0]
+                    if u"TITLE" in song.tags and song.tags[u"TITLE"][0]:
+                        matching_content.metadata_title = song.tags["TITLE"][0]
+                    if u"ALBUM" in song.tags and song.tags[u"ALBUM"][0]:
+                        matching_content.metadata_release = song.tags["ALBUM"][0]
+                    if u"TDOR" in song.tags and song.tags[u"TDOR"][0]:
+                        matching_content.metadata_release_date = song.tags[
+                            "TDOR"][0]
+                    if (
+                            u"TRACKNUMBER" in song.tags and
+                            song.tags[u"TRACKNUMBER"][0]
+                    ):
+                        matching_content.metadata_track_number = song.tags[
+                            "TRACKNUMBER"][0]
+            except OSError:
+                print(
+                    "WARNING: taglib couldn't extract any metadata from file '" +
+                    filepath_plus_extension +
+                    "' "
+                )
+            try:
+                os.rename(filepath_plus_extension, filepath)
+            except IOError:
+                print(
+                    "ERROR: File '" +
+                    filepath_plus_extension +
+                    "' in the uploaded folder that was temporarily " +
+                    "renamed to have a file extension " +
+                    "to retrieve metadata from it couldn't be renamed back")
+        except IOError as e:
+            print(e)
+            print(
+                "WARNING: File '" +
+                filename +
+                "' in the uploaded folder couldn't be renamed " +
+                "temproarily to retrieve metadata from it")
+        # song.tags
+
+        matching_content.save()
+
+        # check it the audio format is much too crappy even for 8bit enthusiasts
+        reason_details = ''
+        if audio.frame_rate < 11025:
+            reason_details = (
+                'Invalid frame rate of ' +
+                str(int(audio.frame_rate)) +
+                ' Hz')
+        if audio.sample_width < 1:
+            # less than one byte? is this even possible? :-p
+            reason_details = (
+                'Invalid sample rate of ' +
+                str(int(audio.sample_width * 8)) +
+                ' bits')
+        if reason_details != '':
+            reject_file(filepath, 'format_error', reason_details)
+            return
+
+    # move file to previewed directory
     if move_file(filepath, destdir + os.sep + filename) is False:
         print(
             "ERROR: '" +
@@ -540,7 +541,16 @@ def checksum_audiofile(srcdir, destdir, filename):
         return
 
     # check and update content processing status
-    if matching_content.processing_state != 'previewed':
+    if (matching_content.processing_state != 'previewed' and
+            matching_content.category == 'audio'):
+        print(
+            "WARNING: File '" +
+            filename +
+            "' in the previewed folder had status '" +
+            matching_content.processing_state + "'.")    
+    if (matching_content.processing_state != 'previewed' and
+            matching_content.processing_state != 'uploaded' and
+            matching_content.category == 'sheet'):
         print(
             "WARNING: File '" +
             filename +
@@ -595,31 +605,189 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     matching_content = trytonAccess.get_content_by_filename(filename)
     if matching_content is None:
         return
+ 
+    if matching_content.category == 'audio':
+        # already metadata present in creation?
+        # then put it on the EchoPrint server rightaway
+        artist = ''
+        title = ''
+        release = ''
+        matching_creation = trytonAccess.get_creation_by_content(matching_content)
+        if matching_creation:
+            artist = matching_creation.artist.name
+            title = matching_creation.title
+            if matching_creation.releases:
+                release = matching_creation.releases[0].title
+            if artist == '':
+                artist = 'DummyFiFaFu'
+            if title == '':
+                title = 'DummyFiFaFu'
+            if release == '':
+                release = 'DummyFiFaFu'
 
-    # already metadata present in creation?
-    # then put it on the EchoPrint server rightaway
-    artist = ''
-    title = ''
-    release = ''
-    matching_creation = trytonAccess.get_creation_by_content(matching_content)
-    if matching_creation:
-        artist = matching_creation.artist.name
-        title = matching_creation.title
-        if matching_creation.releases:
-            release = matching_creation.releases[0].title
-        if artist == '':
-            artist = 'DummyFiFaFu'
-        if title == '':
-            title = 'DummyFiFaFu'
-        if release == '':
-            release = 'DummyFiFaFu'
+        # create fringerprint from audio file using echoprint-codegen
+        if FILEHANDLING_CONFIG['echoprint_server_token']:
+            print('-' * 80)
+            print("processing file " + filepath)
+            proc = subprocess.Popen(
+                ["echoprint-codegen", filepath],
+                stdout=subprocess.PIPE)
+            json_meta_fp = proc.communicate()[0]
+            fpcode_pos = json_meta_fp.find('"code":')
+            if fpcode_pos > 0 and len(json_meta_fp) > 80:
+                print(
+                    "Got from codegen:" +
+                    json_meta_fp[:fpcode_pos+40] +
+                    "....." + json_meta_fp[-40:]
+                )
+            else:
+                print(
+                    "Got from codegen:" +
+                    json_meta_fp)
+                reject_file(
+                    filepath,
+                    'no_fingerprint',
+                    "Got from codegen:" +
+                    json_meta_fp)
+                return
 
-    # create fringerprint from audio file using echoprint-codegen
-    if FILEHANDLING_CONFIG['echoprint_server_token']:
+            meta_fp = json.loads(json_meta_fp)
+
+            # TO DO: More sanity checks with possible no_fingerprint rejection
+
+            # save fingerprint to echoprint server
+            data = {
+                'track_id': filename.replace('-', ''),
+                # '-' reserved for fp segment
+                'token': FILEHANDLING_CONFIG['echoprint_server_token'],
+                'fp_code': meta_fp[0]['code'].encode('utf8'),
+                'artist': artist,
+                'release': release,
+                'track': title,
+                'length': int(matching_content.length),
+                'codever': str(meta_fp[0]['metadata']['version']),
+                }
+            json_data = json.dumps(data)
+            fpcode_pos = json_data.find('"fp":')
+            if fpcode_pos > 0 and len(json_data) > 250:
+                print(
+                    "Sent to server: " +
+                    json_data[:fpcode_pos+40] +
+                    "....." +
+                    json_data[-200:].replace(
+                        FILEHANDLING_CONFIG['echoprint_server_token'],
+                        9*'*')
+                )
+            else:
+                print(
+                    "Sent to server: " +
+                    json_data.replace(
+                        FILEHANDLING_CONFIG['echoprint_server_token'],
+                        9*'*')
+                )
+            print()
+
+            try:
+                ingest_request = requests.post(
+                    "https://echoprint.c3s.cc/ingest",
+                    data,
+                    verify=False,  # TO DO: remove when certificate is updated
+                )
+            except:
+                reject_file(
+                    filepath,
+                    'no_fingerprint',
+                    (
+                        "Could not be sent to EchoPrint server " +
+                        "response code (server offline?)."
+                    )
+                )
+                print(
+                    "ERROR: '" +
+                    srcdir +
+                    "' cloudn't be ingested into the EchoPrint server."
+                )
+                return
+
+            print()
+            print(
+                "Server response:",
+                ingest_request.status_code,
+                ingest_request.reason
+            )
+            print()
+            if (len(ingest_request.text) > 2000):
+                print(
+                    "Body: " +
+                    ingest_request.text[:500] +
+                    '...' +
+                    ingest_request.text[-1500:]
+                )
+            else:
+                print(
+                    "Body: " +
+                    ingest_request.text
+                )
+
+            if ingest_request.status_code != 200:
+                reject_file(
+                    filepath,
+                    'no_fingerprint',
+                    (
+                        "Could not be sent to EchoPrint server response code " +
+                        str(ingest_request.status_code) +
+                        ': ' +
+                        ingest_request.reason
+                    )
+                )
+                print(
+                    "ERROR: '" +
+                    srcdir +
+                    "' cloudn't be ingested into the EchoPrint server. " +
+                    "File rejected.")
+                return
+
+        # do a 2nd test query on the EchoPrint server
+        # (1st was before ingest, during preview)
+        score = 0
+        track_id_from_test_query = ''
+        similiar_artist = ''
+        similiar_track = ''
+
+        # make sure previews and excerpts paths exist
+        content_base_path = FILEHANDLING_CONFIG['content_base_path']
+        if ensure_path_exists(content_base_path) is None:
+            print(
+                "ERROR: '" +
+                content_base_path +
+                "' couldn't be created as content base path."
+            )
+            return
+
+        excerpts_path = FILEHANDLING_CONFIG['excerpts_path']
+        if (
+                ensure_path_exists(excerpts_path) is None
+        ):
+            print(
+                "ERROR: '" +
+                excerpts_path +
+                "' couldn't be created for excerpts."
+            )
+            return
+
+        # create excerpt paths with filenames
+        excerpts_filepath_relative = os.path.join(excerpts_path, filename)
+        excerpts_filepath = os.path.join(
+            content_base_path,
+            excerpts_filepath_relative
+        )
+
+        # create fringerprint from audio file
+        # using echoprint-codegen and relate to the score
         print('-' * 80)
-        print("processing file " + filepath)
+        print("test query with excerpt file " + excerpts_filepath)
         proc = subprocess.Popen(
-            ["echoprint-codegen", filepath],
+            ["echoprint-codegen", excerpts_filepath],
             stdout=subprocess.PIPE)
         json_meta_fp = proc.communicate()[0]
         fpcode_pos = json_meta_fp.find('"code":')
@@ -627,281 +795,124 @@ def fingerprint_audiofile(srcdir, destdir, filename):
             print(
                 "Got from codegen:" +
                 json_meta_fp[:fpcode_pos+40] +
-                "....." + json_meta_fp[-40:]
-            )
-        else:
-            print(
-                "Got from codegen:" +
-                json_meta_fp)
-            reject_file(
-                filepath,
-                'no_fingerprint',
-                "Got from codegen:" +
-                json_meta_fp)
-            return
+                "....." + json_meta_fp[-40:])
 
-        meta_fp = json.loads(json_meta_fp)
+            meta_fp = json.loads(json_meta_fp)
 
-        # TO DO: More sanity checks with possible no_fingerprint rejection
-
-        # save fingerprint to echoprint server
-        data = {
-            'track_id': filename.replace('-', ''),
-            # '-' reserved for fp segment
-            'token': FILEHANDLING_CONFIG['echoprint_server_token'],
-            'fp_code': meta_fp[0]['code'].encode('utf8'),
-            'artist': artist,
-            'release': release,
-            'track': title,
-            'length': int(matching_content.length),
-            'codever': str(meta_fp[0]['metadata']['version']),
-            }
-        json_data = json.dumps(data)
-        fpcode_pos = json_data.find('"fp":')
-        if fpcode_pos > 0 and len(json_data) > 250:
-            print(
-                "Sent to server: " +
-                json_data[:fpcode_pos+40] +
-                "....." +
-                json_data[-200:].replace(
-                    FILEHANDLING_CONFIG['echoprint_server_token'],
-                    9*'*')
-            )
-        else:
-            print(
-                "Sent to server: " +
-                json_data.replace(
-                    FILEHANDLING_CONFIG['echoprint_server_token'],
-                    9*'*')
-            )
-        print()
-
-        try:
-            ingest_request = requests.post(
-                "https://echoprint.c3s.cc/ingest",
-                data,
-                verify=False,  # TO DO: remove when certificate is updated
-            )
-        except:
-            reject_file(
-                filepath,
-                'no_fingerprint',
-                (
-                    "Could not be sent to EchoPrint server " +
-                    "response code (server offline?)."
+            try:
+                query_request = requests.get(
+                    "https://echoprint.c3s.cc/query?fp_code=" +
+                    meta_fp[0]['code'].encode('utf8'),
+                    verify=False,  # TO DO: remove when cert. is updated
                 )
-            )
-            print(
-                "ERROR: '" +
-                srcdir +
-                "' cloudn't be ingested into the EchoPrint server."
-            )
-            return
+            except:
+                print(
+                    "ERROR: '" +
+                    excerpts_filepath_relative +
+                    "' cloudn't be test-queried on the EchoPrint server.")
+                return
 
-        print()
-        print(
-            "Server response:",
-            ingest_request.status_code,
-            ingest_request.reason
-        )
-        print()
-        if (len(ingest_request.text) > 2000):
+            print()
+            print(
+                "Server response: ",
+                query_request.status_code,
+                query_request.reason)
+            print()
             print(
                 "Body: " +
-                ingest_request.text[:500] +
-                '...' +
-                ingest_request.text[-1500:]
+                (query_request.text[:500] + '...' + query_request.text[-1500:]
+                if len(query_request.text) > 2000 else query_request.text)
             )
+            if query_request.status_code != 200:
+                print(
+                    "ERROR: '" +
+                    srcdir +
+                    "' cloudn't be test-queried on the EchoPrint server.")
+            else:
+                qresult = json.loads(query_request.text)
+                score = qresult['score']
+                if qresult['match']:
+                    track_id_from_test_query = (
+                        qresult['track_id'][:8] +
+                        '-' +
+                        qresult['track_id'][8:12] +
+                        '-' +
+                        qresult['track_id'][12:16] +
+                        '-' +
+                        qresult['track_id'][16:])
+                    similiar_artist = qresult['artist']
+                    similiar_track = qresult['track']
         else:
+            print("Got from codegen:" + json_meta_fp)
+
+        # check and update content processing state
+        if matching_content.processing_state != 'checksummed':
             print(
-                "Body: " +
-                ingest_request.text
-            )
-
-        if ingest_request.status_code != 200:
-            reject_file(
-                filepath,
-                'no_fingerprint',
-                (
-                    "Could not be sent to EchoPrint server response code " +
-                    str(ingest_request.status_code) +
-                    ': ' +
-                    ingest_request.reason
-                )
-            )
-            print(
-                "ERROR: '" +
-                srcdir +
-                "' cloudn't be ingested into the EchoPrint server. " +
-                "File rejected.")
-            return
-
-    # do a 2nd test query on the EchoPrint server
-    # (1st was before ingest, during preview)
-    score = 0
-    track_id_from_test_query = ''
-    similiar_artist = ''
-    similiar_track = ''
-
-    # make sure previews and excerpts paths exist
-    content_base_path = FILEHANDLING_CONFIG['content_base_path']
-    if ensure_path_exists(content_base_path) is None:
-        print(
-            "ERROR: '" +
-            content_base_path +
-            "' couldn't be created as content base path."
-        )
-        return
-
-    excerpts_path = FILEHANDLING_CONFIG['excerpts_path']
-    if (
-            ensure_path_exists(excerpts_path) is None
-    ):
-        print(
-            "ERROR: '" +
-            excerpts_path +
-            "' couldn't be created for excerpts."
-        )
-        return
-
-    # create excerpt paths with filenames
-    excerpts_filepath_relative = os.path.join(excerpts_path, filename)
-    excerpts_filepath = os.path.join(
-        content_base_path,
-        excerpts_filepath_relative
-    )
-
-    # create fringerprint from audio file
-    # using echoprint-codegen and relate to the score
-    print('-' * 80)
-    print("test query with excerpt file " + excerpts_filepath)
-    proc = subprocess.Popen(
-        ["echoprint-codegen", excerpts_filepath],
-        stdout=subprocess.PIPE)
-    json_meta_fp = proc.communicate()[0]
-    fpcode_pos = json_meta_fp.find('"code":')
-    if fpcode_pos > 0 and len(json_meta_fp) > 80:
-        print(
-            "Got from codegen:" +
-            json_meta_fp[:fpcode_pos+40] +
-            "....." + json_meta_fp[-40:])
-
-        meta_fp = json.loads(json_meta_fp)
-
-        try:
-            query_request = requests.get(
-                "https://echoprint.c3s.cc/query?fp_code=" +
-                meta_fp[0]['code'].encode('utf8'),
-                verify=False,  # TO DO: remove when cert. is updated
-            )
-        except:
-            print(
-                "ERROR: '" +
-                excerpts_filepath_relative +
-                "' cloudn't be test-queried on the EchoPrint server.")
-            return
-
-        print()
-        print(
-            "Server response: ",
-            query_request.status_code,
-            query_request.reason)
-        print()
-        print(
-            "Body: " +
-            (query_request.text[:500] + '...' + query_request.text[-1500:]
-             if len(query_request.text) > 2000 else query_request.text)
-        )
-        if query_request.status_code != 200:
-            print(
-                "ERROR: '" +
-                srcdir +
-                "' cloudn't be test-queried on the EchoPrint server.")
-        else:
-            qresult = json.loads(query_request.text)
-            score = qresult['score']
-            if qresult['match']:
-                track_id_from_test_query = (
-                    qresult['track_id'][:8] +
-                    '-' +
-                    qresult['track_id'][8:12] +
-                    '-' +
-                    qresult['track_id'][12:16] +
-                    '-' +
-                    qresult['track_id'][16:])
-                similiar_artist = qresult['artist']
-                similiar_track = qresult['track']
-    else:
-        print("Got from codegen:" + json_meta_fp)
-
-    # check and update content processing state
-    if matching_content.processing_state != 'checksummed':
-        print(
-            "WARNING: File '" +
-            filename +
-            "' in the checksummed folder had status '" +
-            matching_content.processing_state +
-            "'.")
-    matching_content.processing_state = 'fingerprinted'
-    matching_content.processing_hostname = HOSTNAME
-    matching_content.path = filepath.replace(
-        STORAGE_BASE_PATH +
-        os.sep, '')  # relative path
-    matching_content.post_ingest_excerpt_score = score
-    if track_id_from_test_query:
-        most_similar_content = trytonAccess.get_content_by_filename(
-            track_id_from_test_query)
-        if most_similar_content is None:
-            print(
-                "ERROR: Couldn't find content entry " +
-                "of most similar content for '" +
+                "WARNING: File '" +
                 filename +
-                "' in database. EchoPrint server seems " +
-                "out of sync with database.")
-            reject_file(
-                filepath,
-                'missing_database_record',
-                "File name: " +
-                filepath)
+                "' in the checksummed folder had status '" +
+                matching_content.processing_state +
+                "'.")
+        matching_content.processing_state = 'fingerprinted'
+        matching_content.processing_hostname = HOSTNAME
+        matching_content.path = filepath.replace(
+            STORAGE_BASE_PATH +
+            os.sep, '')  # relative path
+        matching_content.post_ingest_excerpt_score = score
+        if track_id_from_test_query:
+            most_similar_content = trytonAccess.get_content_by_filename(
+                track_id_from_test_query)
+            if most_similar_content is None:
+                print(
+                    "ERROR: Couldn't find content entry " +
+                    "of most similar content for '" +
+                    filename +
+                    "' in database. EchoPrint server seems " +
+                    "out of sync with database.")
+                reject_file(
+                    filepath,
+                    'missing_database_record',
+                    "File name: " +
+                    filepath)
+            else:
+                if (
+                    track_id_from_test_query == matching_content.most_similiar_content.uuid
+                ):
+                    matching_content.pre_ingest_excerpt_score = 0
+
+        matching_content.save()
+
+        # TO DO: user access control
+        Fingerprintlog = Model.get('content.fingerprintlog')
+        new_logentry = Fingerprintlog()
+        user = Model.get('res.user')
+        matching_users = user.find(['login', '=', 'admin'])
+        if not matching_users:
+            return
+
+        new_logentry.user = matching_users[0]
+        new_logentry.content = matching_content
+        new_logentry.timestamp = datetime.datetime.now()
+        new_logentry.fingerprinting_algorithm = 'EchoPrint'
+        if fpcode_pos > 0 and len(json_meta_fp) > 80:
+            new_logentry.fingerprinting_version = str(
+                meta_fp[0]['metadata']['version'])
         else:
-            if (
-                track_id_from_test_query == matching_content.most_similiar_content.uuid
-            ):
-                matching_content.pre_ingest_excerpt_score = 0
+            new_logentry.fingerprinting_version = (
+                "unknown (check if echoprint access token was set properly!)")
+        new_logentry.save()
 
-    matching_content.save()
-
-    # TO DO: user access control
-    Fingerprintlog = Model.get('content.fingerprintlog')
-    new_logentry = Fingerprintlog()
-    user = Model.get('res.user')
-    matching_users = user.find(['login', '=', 'admin'])
-    if not matching_users:
-        return
-
-    new_logentry.user = matching_users[0]
-    new_logentry.content = matching_content
-    new_logentry.timestamp = datetime.datetime.now()
-    new_logentry.fingerprinting_algorithm = 'EchoPrint'
-    if fpcode_pos > 0 and len(json_meta_fp) > 80:
-        new_logentry.fingerprinting_version = str(
-            meta_fp[0]['metadata']['version'])
-    else:
-        new_logentry.fingerprinting_version = (
-            "unknown (check if echoprint access token was set properly!)")
-    new_logentry.save()
-
-    # TO DO: check newly ingested fingerprint using the excerpt
-    # Response codes:
-    #     0 = NOT_ENOUGH_CODE,
-    #     1 = CANNOT_DECODE,
-    #     2 = SINGLE_BAD_MATCH,
-    #     3 = SINGLE_GOOD_MATCH,
-    #     4 = NO_RESULTS,
-    #     5 = MULTIPLE_GOOD_MATCH_HISTOGRAM_INCREASED,
-    #     6 = MULTIPLE_GOOD_MATCH_HISTOGRAM_DECREASED,
-    #     7 = MULTIPLE_BAD_HISTOGRAM_MATCH,
-    #     8 = MULTIPLE_GOOD_MATCH
+        # TO DO: check newly ingested fingerprint using the excerpt
+        # Response codes:
+        #     0 = NOT_ENOUGH_CODE,
+        #     1 = CANNOT_DECODE,
+        #     2 = SINGLE_BAD_MATCH,
+        #     3 = SINGLE_GOOD_MATCH,
+        #     4 = NO_RESULTS,
+        #     5 = MULTIPLE_GOOD_MATCH_HISTOGRAM_INCREASED,
+        #     6 = MULTIPLE_GOOD_MATCH_HISTOGRAM_DECREASED,
+        #     7 = MULTIPLE_BAD_HISTOGRAM_MATCH,
+        #     8 = MULTIPLE_GOOD_MATCH
 
     # move file to fingerprinted directory
     if move_file(filepath, destdir + os.sep + filename) is False:
@@ -956,12 +967,21 @@ def drop_audiofile(srcdir, destdir, filename):
         overwritefile.close()
 
     # check and update content processing status
-    if matching_content.processing_state != 'fingerprinted':
+    if (matching_content.processing_state != 'fingerprinted' and
+            matching_content.category == 'audio'):
         print(
             "WARNING: File '" +
             filename +
             "' in the fingerprinted folder had status '" +
             matching_content.processing_state + "'.")
+    if (matching_content.processing_state != 'fingerprinted' and
+            matching_content.processing_state != 'checksummed' and
+            matching_content.category == 'sheet'):
+        print(
+            "WARNING: File '" +
+            filename +
+            "' in the fingerprinted folder had status '" +
+            matching_content.processing_state + "'.")           
     matching_content.processing_state = 'dropped'
     matching_content.processing_hostname = HOSTNAME
     matching_content.path = filepath.replace(
@@ -971,10 +991,6 @@ def drop_audiofile(srcdir, destdir, filename):
 
 
 # --- Helper functions ---
-
-
-# notiz fuer mich:
-# von Content aus betrachtet: content.creation.licenses[n].name
 
 
 def directory_walker(processing_step_func, args):
