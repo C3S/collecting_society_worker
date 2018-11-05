@@ -158,7 +158,11 @@ def preview_audiofile(srcdir, destdir, filename):
         excerpts_filepath_relative)
 
     # find content in database from filename
-    matching_content = trytonAccess.get_content_by_filename(filename)
+    try:
+        matching_content = trytonAccess.get_content_by_filename(filename)
+    except:
+        print("ERROR: Database seems to be under rebuild. Trying again later.")
+        exit()
     if matching_content is None:
         print(
             "ERROR: Couldn't find content entry for '" +
