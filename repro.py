@@ -36,6 +36,8 @@ import trytonAccess
 
 # fix for self-signed certificates
 if os.environ.get('ENVIRONMENT') == 'development':
+    import ptvsd
+    ptvsd.enable_attach(address=("0.0.0.0", 51002), redirect_output=True)   
     if hasattr(ssl, '_create_unverified_context'):
         ssl._create_default_https_context = ssl._create_unverified_context
         # print "WARNING: fix for self-signed certificates activated"
