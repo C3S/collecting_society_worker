@@ -1,3 +1,6 @@
+[debugging]
+# debugger = ptvsd
+
 [proteus]
 host     = tryton
 port     = 8069

@@ -32,12 +32,10 @@ import trytonAccess
 
 # uncomment to debug with windbg:
 # import rpdb2;
-# rpdb2.start_embedded_debugger("supersecret", fAllowRemote = True)
+# rpdb2.start_embedded_debugger("supersecret", fAllowRemote = True)  
 
 # fix for self-signed certificates
 if os.environ.get('ENVIRONMENT') == 'development':
-    import ptvsd
-    ptvsd.enable_attach(address=("0.0.0.0", 51002), redirect_output=True)   
     if hasattr(ssl, '_create_unverified_context'):
         ssl._create_default_https_context = ssl._create_unverified_context
         # print "WARNING: fix for self-signed certificates activated"
@@ -72,6 +70,17 @@ def expand_envvars(section):
 # read config from .ini
 CONFIGURATION = ConfigParser.ConfigParser()
 CONFIGURATION.read("config.ini")
+
+# ptvsd debugging
+try:
+    DEBUGGING_CONFIG = expand_envvars(dict(CONFIGURATION.items('debugging')))
+    if DEBUGGING_CONFIG['debugger'] == 'ptvsd':
+        import ptvsd
+        ptvsd.enable_attach(address=("0.0.0.0", 51002), redirect_output=True)
+        print("ptvsd debugger listening to port 51002.")
+except ConfigParser.NoSectionError:
+    print("No debugger specified.")
+
 try:
     PROTEUS_CONFIG = expand_envvars(dict(CONFIGURATION.items('proteus')))
 except ConfigParser.NoSectionError:
