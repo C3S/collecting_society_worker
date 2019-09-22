@@ -79,7 +79,7 @@ try:
         ptvsd.enable_attach(address=("0.0.0.0", 51002), redirect_output=True)
         print("ptvsd debugger listening to port 51002.")
 except ConfigParser.NoSectionError:
-    print("No debugger specified.")
+    pass
 
 try:
     PROTEUS_CONFIG = expand_envvars(dict(CONFIGURATION.items('proteus')))
