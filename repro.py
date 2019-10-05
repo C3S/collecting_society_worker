@@ -1,4 +1,4 @@
-#!env/bin/python
+#!/usr/bin/env python
 # For copyright and license terms, see COPYRIGHT.rst (top level of repository)
 # Repository: ...
 
@@ -29,10 +29,6 @@ import taglib
 from proteus import config, Model
 import trytonAccess
 # import fileTools
-
-# uncomment to debug with windbg:
-# import rpdb2;
-# rpdb2.start_embedded_debugger("supersecret", fAllowRemote = True)  
 
 # fix for self-signed certificates
 if os.environ.get('ENVIRONMENT') == 'development':
@@ -71,10 +67,15 @@ def expand_envvars(section):
 CONFIGURATION = ConfigParser.ConfigParser()
 CONFIGURATION.read("config.ini")
 
-# ptvsd debugging
+# debugging
 try:
     DEBUGGING_CONFIG = expand_envvars(dict(CONFIGURATION.items('debugging')))
-    if DEBUGGING_CONFIG['debugger'] == 'ptvsd':
+    # winpdb
+    if int(DEBUGGING_CONFIG['debugger_winpdb']):
+        import rpdb2
+        rpdb2.start_embedded_debugger("supersecret", fAllowRemote=True)
+    # ptvsd
+    if int(DEBUGGING_CONFIG['debugger_ptvsd']):
         import ptvsd
         ptvsd.enable_attach(address=("0.0.0.0", 51002), redirect_output=True)
         print("ptvsd debugger listening to port 51002.")

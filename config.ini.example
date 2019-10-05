@@ -1,10 +1,11 @@
 [debugging]
-# debugger = ptvsd
+debugger_ptvsd=${DEBUGGER_PTVSD}
+debugger_winpdb=${DEBUGGER_WINPDB}
 
 [proteus]
-host     = tryton
-port     = 8069
-database = c3s
+host     = ${TRYTON_HOSTNAME}
+port     = ${TRYTON_PORT}
+database = ${PROJECT}
 user     = admin
 password = admin 
 
