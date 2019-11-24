@@ -1,0 +1,1 @@
+include *.md *.ini *.txt config.ini.example

@@ -9,24 +9,21 @@ with open(os.path.join(here, 'CHANGES.txt')) as f:
     CHANGES = f.read()
 
 install_requires = [
-    'proteus==3.4.8',
-    'click==6.7',
-    'pyechonest',
-    'pydub',
-    'pytaglib',
+    'proteus<3.5.0',
+    'click>=4.0',
+    'pyechonest>=9.0',
+    'pydub>=0.18',
+    'pytaglib>=1.4',
 ]
 test_requires = [
     'coverage',
     'nose',
 ]
-docs_requires = [
-    'sphinx==1.5.2',  # for generating the documentation
-    'sphinxcontrib-plantuml==0.8.1',
-]
+docs_requires = []
 setup(
-    name='c3sRepertoireProcessing',
+    name='collecting_society_worker',
     version='0.0',
-    description='c3sRepertoireProcessing',
+    description='collecting_society_worker',
     long_description=README + '\n\n' + CHANGES,
     classifiers=[
         'Development Status :: 3 - Alpha',
