@@ -35,7 +35,7 @@ except KeyError as e:
           % str(e))
     exit()
 
-print("Archiving...")
+# print("Archiving...")
 
 
 class ArchProc():

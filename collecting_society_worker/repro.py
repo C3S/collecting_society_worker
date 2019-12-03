@@ -104,22 +104,6 @@ if (
 HOSTNAME = socket.gethostname()
 STORAGE_BASE_PATH = FILEHANDLING_CONFIG['storage_base_path']
 
-#  get access to database
-try:
-    config.set_xmlrpc(
-        "https://" + PROTEUS_CONFIG['user'] +
-        ":" +
-        PROTEUS_CONFIG['password'] +
-        "@" + PROTEUS_CONFIG['host'] +
-        ":" + PROTEUS_CONFIG['port'] +
-        "/" +
-        PROTEUS_CONFIG['database']
-    )
-except Exception as e:
-    print(
-        "Database connection could not be established "
-        "(yet), skipping file processing ... %s" % e)
-    exit()
 
 # --- Processing stage functions for single audiofiles ---
 
@@ -1323,7 +1307,48 @@ def loop(ctx):
         print('entering new processing cycle')
 
 
+def connect_db():
+    """
+    get access to database
+    """
+    try:
+        config.set_xmlrpc(
+            "https://" + PROTEUS_CONFIG['user'] +
+            ":" +
+            PROTEUS_CONFIG['password'] +
+            "@" + PROTEUS_CONFIG['host'] +
+            ":" + PROTEUS_CONFIG['port'] +
+            "/" +
+            PROTEUS_CONFIG['database']
+        )
+    except:
+        # As XMLRPC has no disconnect method (should be stateless), but leaves
+        # a connection to postgres open, the postgres backend has to 
+        # disconnect them via pg_terminate_backend in order to be able to drop
+        # the database (testing).
+        # The proteus config on the other hand seems to cache some connection
+        # data, as the first connection results in an unauthorized error, so
+        # a second try has to be added.
+        try:
+            config.set_xmlrpc(
+                "https://" + PROTEUS_CONFIG['user'] +
+                ":" +
+                PROTEUS_CONFIG['password'] +
+                "@" + PROTEUS_CONFIG['host'] +
+                ":" + PROTEUS_CONFIG['port'] +
+                "/" +
+                PROTEUS_CONFIG['database']
+            )
+        except Exception as e:
+            print(
+                "Database connection could not be established "
+                "(yet), skipping file processing ... %s" % e)
+            exit()
+
+
 if __name__ == '__main__':
+    
+    # ensure storage path
     if ensure_path_exists(STORAGE_BASE_PATH) is None:
         print(
             "ERROR: '" +
@@ -1331,4 +1356,9 @@ if __name__ == '__main__':
             "' couldn't be created as storage base path.")
 
         exit()
+
+    # connect db
+    connect_db()
+
+    # execute repro
     repro()
