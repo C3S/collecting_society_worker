@@ -20,6 +20,12 @@ destpw = c3s_secretpassword_on_desthost_PLEASE_CHANGE!
 desthost = localhost
 destdir = /home/c3s/archivetest/dest
 
+[echoprint]
+schema = ${ECHOPRINT_SCHEMA}
+hostname = ${ECHOPRINT_HOSTNAME}
+port = ${ECHOPRINT_PORT}
+token = ${ECHOPRINT_TOKEN}
+
 [filehandling]
 # reduces filesize of dropped files by replacing their content with the filename
 # set to yes for test purposes to save space on test machine
