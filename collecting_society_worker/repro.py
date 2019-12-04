@@ -677,22 +677,20 @@ def fingerprint_audiofile(srcdir, destdir, filename):
             }
         json_data = json.dumps(data)
         fpcode_pos = json_data.find('"fp":')
-        if fpcode_pos > 0 and len(json_data) > 250:
+        if ECHOPRINT_CONFIG['token']:
+            json_data_pwhidden = json_data[-200:].replace(
+                                 ECHOPRINT_CONFIG['token'], 9*'*')
+        else:
+            json_data_pwhidden = json_data
+        if fpcode_pos > 0 and len(json_data_pwhidden) > 250:
             print(
                 "Sent to server: " +
-                json_data[:fpcode_pos+40] +
+                json_data_pwhidden[:fpcode_pos+40] +
                 "....." +
-                json_data[-200:].replace(
-                    ECHOPRINT_CONFIG['token'],
-                    9*'*')
+                json_data_pwhidden[-200:]
             )
         else:
-            print(
-                "Sent to server: " +
-                json_data.replace(
-                    ECHOPRINT_CONFIG['token'],
-                    9*'*')
-            )
+            print("Sent to server: " + json_data_pwhidden)
         print()
 
         try:

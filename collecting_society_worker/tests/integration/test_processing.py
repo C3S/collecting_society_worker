@@ -71,7 +71,8 @@ class TestProcessing(unittest.TestCase):
             query_request.reason)
         qresult = json.loads(query_request.text)
         self.assertGreaterEqual(int(qresult['score']), 50,
-            "score from EchoPrintServer result is too low")
+            "score from EchoPrintServer result is too low (" +
+            str(qresult['score']) + ")")
         self.assertEqual(qresult['artist'], "Michael Jackson")
         self.assertEqual(qresult['track'], "Billie Jean")
 
