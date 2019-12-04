@@ -94,6 +94,9 @@ except ConfigParser.NoSectionError:
         "from the collecting_society_worker main folder.")
     exit()
 
+if os.environ.get('ENVIRONMENT') == 'testing':
+    PROTEUS_CONFIG['database'] += '_test'
+
 FILEHANDLING_CONFIG = expand_envvars(dict(CONFIGURATION.items('filehandling')))
 
 ECHOPRINT_CONFIG = expand_envvars(dict(CONFIGURATION.items('echoprint')))
@@ -1316,24 +1319,16 @@ def connect_db():
     """
     get access to database
     """
-    try:
-        config.set_xmlrpc(
-            "https://" + PROTEUS_CONFIG['user'] +
-            ":" +
-            PROTEUS_CONFIG['password'] +
-            "@" + PROTEUS_CONFIG['host'] +
-            ":" + PROTEUS_CONFIG['port'] +
-            "/" +
-            PROTEUS_CONFIG['database']
-        )
-    except:
-        # As XMLRPC has no disconnect method (should be stateless), but leaves
-        # a connection to postgres open, the postgres backend has to 
-        # disconnect them via pg_terminate_backend in order to be able to drop
-        # the database (testing).
-        # The proteus config on the other hand seems to cache some connection
-        # data, as the first connection results in an unauthorized error, so
-        # a second try has to be added.
+    max_tries = 3
+    tries = 0
+    # As XMLRPC has no disconnect method (should be stateless), but leaves
+    # a connection to postgres open, the postgres backend has to
+    # disconnect them via pg_terminate_backend in order to be able to drop
+    # the database (testing).
+    # The proteus config on the other hand seems to cache some connection
+    # data, as the first connection results in an unauthorized error, so
+    # a second try has to be added.
+    while tries < max_tries:
         try:
             config.set_xmlrpc(
                 "https://" + PROTEUS_CONFIG['user'] +
@@ -1344,11 +1339,15 @@ def connect_db():
                 "/" +
                 PROTEUS_CONFIG['database']
             )
+            break
         except Exception as e:
-            print(
-                "Database connection could not be established "
-                "(yet), skipping file processing ... %s" % e)
-            exit()
+            tries += 1
+            if tries == max_tries:
+                print(
+                    "Database connection could not be established "
+                    "(yet), skipping file processing ... %s" % e)
+                exit()
+            time.sleep(1)
 
 
 if __name__ == '__main__':
