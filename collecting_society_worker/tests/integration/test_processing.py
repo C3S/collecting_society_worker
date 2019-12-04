@@ -45,19 +45,7 @@ class TestProcessing(unittest.TestCase):
         pass
 
     def tearDown(self):
-        pass        
-
-    def test_echoprintserver_token_set(self):
-        """
-        checking if the EchoPrint server token is no longer the fake default
-        """
-        self.assertNotEqual(
-            repro.FILEHANDLING_CONFIG['echoprint_server_token'],
-            "s0secret!!",
-            "default echoprint server token still set; "
-            "please change the token in services/worker.env "
-            "according to the one in API.py on the EchoPrint server."
-        )
+        pass
 
     def test_echoprintserver_for_existing_fingerprint(self):
         """
@@ -65,7 +53,7 @@ class TestProcessing(unittest.TestCase):
         """
         # this test uses a fingerprint from "billie jean" by michael jackson,
         # which is part of the EchoNest test data set
-        url = "https://echoprint.c3s.cc/query"
+        url = repro.ECHOPRINT_URL + "/query"
         id = "fp_code"
         fp_file = open(os.path.join(testdatafolder,
                        "michael_jackson_-_billie_jean.fingerprint"),"r")
@@ -88,7 +76,7 @@ class TestProcessing(unittest.TestCase):
         self.assertEqual(qresult['track'], "Billie Jean")
 
         self.assertNotEqual(
-            repro.FILEHANDLING_CONFIG['echoprint_server_token'],
+            repro.ECHOPRINT_CONFIG['token'],
             "s0secret!!",
             "default echoprint server token still set; "
             "please change the token in services/worker.env "

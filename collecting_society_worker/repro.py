@@ -36,6 +36,7 @@ if os.environ.get('ENVIRONMENT') != 'production':
         ssl._create_default_https_context = ssl._create_unverified_context
         # print "WARNING: fix for self-signed certificates activated"
 
+
 # --- some constants ---
 
 # 2DO: _preview_default
@@ -94,12 +95,17 @@ except ConfigParser.NoSectionError:
     exit()
 
 FILEHANDLING_CONFIG = expand_envvars(dict(CONFIGURATION.items('filehandling')))
-if (
-        FILEHANDLING_CONFIG['echoprint_server_token'] == '' or
-        not FILEHANDLING_CONFIG['echoprint_server_token']
-):
-    print(
-        "WARNING: echoprint_server_token not set in config.ini!")
+
+ECHOPRINT_CONFIG = expand_envvars(dict(CONFIGURATION.items('echoprint')))
+ECHOPRINT_SCHEMA = ECHOPRINT_CONFIG['schema']
+assert(ECHOPRINT_SCHEMA)
+ECHOPRINT_HOSTNAME = ECHOPRINT_CONFIG['hostname']
+assert(ECHOPRINT_HOSTNAME)
+ECHOPRINT_PORT = ECHOPRINT_CONFIG['port']
+if not ECHOPRINT_PORT:
+    ECHOPRINT_PORT = 80  
+ECHOPRINT_URL = (ECHOPRINT_SCHEMA + "://" + ECHOPRINT_HOSTNAME + ":" + 
+                ECHOPRINT_PORT)
 
 HOSTNAME = socket.gethostname()
 STORAGE_BASE_PATH = FILEHANDLING_CONFIG['storage_base_path']
@@ -219,7 +225,7 @@ def preview_audiofile(srcdir, destdir, filename):
 
             try:
                 query_request = requests.get(
-                    "https://echoprint.c3s.cc/query?fp_code=" +
+                    ECHOPRINT_URL + "/query?fp_code=" +
                     meta_fp[0]['code'].encode('utf8'),
                     verify=False,  # TO DO: remove when cert. is updated
                 )
@@ -629,126 +635,125 @@ def fingerprint_audiofile(srcdir, destdir, filename):
                 release = 'DummyFiFaFu'
 
         # create fringerprint from audio file using echoprint-codegen
-        if FILEHANDLING_CONFIG['echoprint_server_token']:
-            print('-' * 80)
-            print("processing file " + filepath)
-            proc = subprocess.Popen(
-                ["echoprint-codegen", filepath],
-                stdout=subprocess.PIPE)
-            json_meta_fp = proc.communicate()[0]
-            fpcode_pos = json_meta_fp.find('"code":')
-            if fpcode_pos > 0 and len(json_meta_fp) > 80:
-                print(
-                    "Got from codegen:" +
-                    json_meta_fp[:fpcode_pos+40] +
-                    "....." + json_meta_fp[-40:]
-                )
-            else:
-                print(
-                    "Got from codegen:" +
-                    json_meta_fp)
-                reject_file(
-                    filepath,
-                    'no_fingerprint',
-                    "Got from codegen:" +
-                    json_meta_fp)
-                return
-
-            meta_fp = json.loads(json_meta_fp)
-
-            # TO DO: More sanity checks with possible no_fingerprint rejection
-
-            # save fingerprint to echoprint server
-            data = {
-                'track_id': filename.replace('-', ''),
-                # '-' reserved for fp segment
-                'token': FILEHANDLING_CONFIG['echoprint_server_token'],
-                'fp_code': meta_fp[0]['code'].encode('utf8'),
-                'artist': artist,
-                'release': release,
-                'track': title,
-                'length': int(matching_content.length),
-                'codever': str(meta_fp[0]['metadata']['version']),
-                }
-            json_data = json.dumps(data)
-            fpcode_pos = json_data.find('"fp":')
-            if fpcode_pos > 0 and len(json_data) > 250:
-                print(
-                    "Sent to server: " +
-                    json_data[:fpcode_pos+40] +
-                    "....." +
-                    json_data[-200:].replace(
-                        FILEHANDLING_CONFIG['echoprint_server_token'],
-                        9*'*')
-                )
-            else:
-                print(
-                    "Sent to server: " +
-                    json_data.replace(
-                        FILEHANDLING_CONFIG['echoprint_server_token'],
-                        9*'*')
-                )
-            print()
-
-            try:
-                ingest_request = requests.post(
-                    "https://echoprint.c3s.cc/ingest",
-                    data,
-                    verify=False,  # TO DO: remove when certificate is updated
-                )
-            except:
-                reject_file(
-                    filepath,
-                    'no_fingerprint',
-                    (
-                        "Could not be sent to EchoPrint server " +
-                        "response code (server offline?)."
-                    )
-                )
-                print(
-                    "ERROR: '" +
-                    srcdir +
-                    "' cloudn't be ingested into the EchoPrint server."
-                )
-                return
-
-            print()
+        print('-' * 80)
+        print("processing file " + filepath)
+        proc = subprocess.Popen(
+            ["echoprint-codegen", filepath],
+            stdout=subprocess.PIPE)
+        json_meta_fp = proc.communicate()[0]
+        fpcode_pos = json_meta_fp.find('"code":')
+        if fpcode_pos > 0 and len(json_meta_fp) > 80:
             print(
-                "Server response:",
-                ingest_request.status_code,
-                ingest_request.reason
+                "Got from codegen:" +
+                json_meta_fp[:fpcode_pos+40] +
+                "....." + json_meta_fp[-40:]
             )
-            print()
-            if (len(ingest_request.text) > 2000):
-                print(
-                    "Body: " +
-                    ingest_request.text[:500] +
-                    '...' +
-                    ingest_request.text[-1500:]
-                )
-            else:
-                print(
-                    "Body: " +
-                    ingest_request.text
-                )
+        else:
+            print(
+                "Got from codegen:" +
+                json_meta_fp)
+            reject_file(
+                filepath,
+                'no_fingerprint',
+                "Got from codegen:" +
+                json_meta_fp)
+            return
 
-            if ingest_request.status_code != 200:
-                reject_file(
-                    filepath,
-                    'no_fingerprint',
-                    (
-                        "Could not be sent to EchoPrint server response code " +
-                        str(ingest_request.status_code) +
-                        ': ' +
-                        ingest_request.reason
-                    )
+        meta_fp = json.loads(json_meta_fp)
+
+        # TO DO: More sanity checks with possible no_fingerprint rejection
+
+        # save fingerprint to echoprint server
+        data = {
+            'track_id': filename.replace('-', ''),
+            # '-' reserved for fp segment
+            'token': ECHOPRINT_CONFIG['token'],
+            'fp_code': meta_fp[0]['code'].encode('utf8'),
+            'artist': artist,
+            'release': release,
+            'track': title,
+            'length': int(matching_content.length),
+            'codever': str(meta_fp[0]['metadata']['version']),
+            }
+        json_data = json.dumps(data)
+        fpcode_pos = json_data.find('"fp":')
+        if fpcode_pos > 0 and len(json_data) > 250:
+            print(
+                "Sent to server: " +
+                json_data[:fpcode_pos+40] +
+                "....." +
+                json_data[-200:].replace(
+                    ECHOPRINT_CONFIG['token'],
+                    9*'*')
+            )
+        else:
+            print(
+                "Sent to server: " +
+                json_data.replace(
+                    ECHOPRINT_CONFIG['token'],
+                    9*'*')
+            )
+        print()
+
+        try:
+            ingest_request = requests.post(
+                ECHOPRINT_URL + "/ingest",
+                data,
+                verify=False,  # TO DO: remove when certificate is updated
+            )
+        except Exception as e:
+            reject_file(
+                filepath,
+                'no_fingerprint',
+                (  # TODO think about a better message...
+                    "Could not be sent to EchoPrint server " +
+                    "response code (server offline?). Note: %s" % e
                 )
-                print(
-                    "ERROR: '" +
-                    srcdir +
-                    "' cloudn't be ingested into the EchoPrint server. " +
-                    "File rejected.")
-                return
+            )
+            print(
+                "ERROR: '" +
+                srcdir +
+                "' cloudn't be ingested into the EchoPrint server."
+            )
+            return
+
+        print()
+        print(
+            "Server response:",
+            ingest_request.status_code,
+            ingest_request.reason
+        )
+        print()
+        if (len(ingest_request.text) > 2000):
+            print(
+                "Body: " +
+                ingest_request.text[:500] +
+                '...' +
+                ingest_request.text[-1500:]
+            )
+        else:
+            print(
+                "Body: " +
+                ingest_request.text
+            )
+
+        if ingest_request.status_code != 200:
+            reject_file(
+                filepath,
+                'no_fingerprint',
+                (
+                    "Could not be sent to EchoPrint server response code " +
+                    str(ingest_request.status_code) +
+                    ': ' +
+                    ingest_request.reason
+                )
+            )
+            print(
+                "ERROR: '" +
+                srcdir +
+                "' cloudn't be ingested into the EchoPrint server. " +
+                "File rejected.")
+            return
 
         # do a 2nd test query on the EchoPrint server
         # (1st was before ingest, during preview)
@@ -804,7 +809,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
 
             try:
                 query_request = requests.get(
-                    "https://echoprint.c3s.cc/query?fp_code=" +
+                    ECHOPRINT_URL + "/query?fp_code=" +
                     meta_fp[0]['code'].encode('utf8'),
                     verify=False,  # TO DO: remove when cert. is updated
                 )
