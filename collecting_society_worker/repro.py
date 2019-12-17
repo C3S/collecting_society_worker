@@ -269,8 +269,11 @@ def preview_audiofile(srcdir, destdir, filename):
                         '-' +
                         qresult['track_id'][16:]
                     )
-                    similiar_artist = qresult['artist']
-                    similiar_track = qresult['track']
+                    # TODO: get these two from the creation table:
+                    if 'artist' in qresult.keys():
+                        similiar_artist = qresult['artist']
+                    if 'track' in qresult.keys():
+                        similiar_track = qresult['track']
         else:
             print("Got from codegen:" + json_meta_fp)
 
@@ -687,13 +690,13 @@ def fingerprint_audiofile(srcdir, destdir, filename):
             json_data_pwhidden = json_data
         if fpcode_pos > 0 and len(json_data_pwhidden) > 250:
             print(
-                "Sent to server: " +
+                "Ingesting to server: " +
                 json_data_pwhidden[:fpcode_pos+40] +
                 "....." +
                 json_data_pwhidden[-200:]
             )
         else:
-            print("Sent to server: " + json_data_pwhidden)
+            print("Ingesting to server: " + json_data_pwhidden)
         print()
 
         try:
