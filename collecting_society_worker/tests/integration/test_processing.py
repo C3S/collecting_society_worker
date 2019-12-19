@@ -188,6 +188,7 @@ class TestProcessing(unittest.TestCase):
         query_request = requests.post(url,
             data = { var_id: fingerprint.encode('utf8') }, verify=False
         )
+
         self.assertEqual(query_request.status_code, 200,
             "status code returned from server is not 200 but " +
             str(query_request.status_code) + " -- " +
@@ -207,7 +208,7 @@ class TestProcessing(unittest.TestCase):
         )
 
 
-    def XXXXXXXXXtest_005_delete_a_fingerprint(self):
+    def test_005_delete_a_fingerprint(self):
         """
         deleting a fingerprint that does already exists on the EchoPrint server
         """
@@ -215,10 +216,10 @@ class TestProcessing(unittest.TestCase):
         # which is part of the EchoNest test data set
         url = repro.ECHOPRINT_URL + "/delete"
         var_id = "track_id"
-        track = "TRJVITU123E857F729"
+        track = "TRWIZHB123E858D912"
 
         query_request = requests.post(url,
-            data = { var_id: track.encode('utf8') }, verify=False
+            data = { var_id: track }, verify=False
         )
         self.assertEqual(query_request.status_code, 200,
             "status code returned from server is not 200 but " +

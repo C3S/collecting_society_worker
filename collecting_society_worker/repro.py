@@ -1262,25 +1262,27 @@ def drop():
                          FILEHANDLING_CONFIG['dropped_path'])))
 
 
-@repro.command('match')
+@repro.command('delete')
 # @click.pass_context
-def match():  # code
+def delete():
     """
-    match fingerprint, get the identifier from the echoprint server
+    delete a fingerprint from the echoprint server
     """
 
-    # for testing, match first fingerprint code in creation.utilisation.imp
-    # code = ""
-
-    utilizations = Model.get('creation.utilisation.imp')
-    result = utilizations.find(['title', "=", "999,999"])
-    if not result:
-        sys.exit()
+    # utilizations = Model.get('creation.utilisation.imp')
+    # result = utilizations.find(['title', "=", "999,999"])
+    # if not result:
+    #     sys.exit()
     # code = result.fingerprint
 
-    print(
-        result[0].fingerprint
-    )
+    url = ECHOPRINT_URL + "/delete"
+    var_id = "track_id"
+    track = "TRWIZHB123E858D912"
+
+    query_request = requests.post(url, data={var_id: track}, verify=False)
+
+    print("status code: " + str(query_request.status_code) + " -- " +
+          query_request.reason)
 
 
 @repro.command('all')
