@@ -611,7 +611,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     """
     Audiofingerprint a single file.
 
-    Along with metadata lookup and store it on the EchoPrint server
+    Comes along with metadata lookup and store it on the EchoPrint server.
     """
 
     filepath = os.path.join(srcdir, filename)

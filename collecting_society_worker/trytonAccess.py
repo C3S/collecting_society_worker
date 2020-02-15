@@ -11,9 +11,11 @@ from proteus import config, Model
 
 
 def connect(pconfig):
-    # get access to tryton database for processing state updates
-    # use http only on local test instance (and uncomment [ssl] entries in
-    # server side trytond.conf for using http)
+    """
+    get access to tryton database for processing state updates
+    use http only on local test instance (and uncomment [ssl] entries in
+    server side trytond.conf for using http)
+    """
     config.set_xmlrpc(
         "http://" + pconfig["user"] + ":" + pconfig["password"]
         + "@" + pconfig["host"] + ":" + pconfig["port"] + "/"
@@ -81,6 +83,10 @@ def update_content_pstate(filename, pstate):
 
 
 def get_or_insert_web_user(email):
+    """
+    Finds a web user by email; 
+    if she doesn't exist, she will be created and returned
+    """
     WebUser = Model.get('web.user')
     matching_user = WebUser.find(['email', "=", email])
     if len(matching_user) == 0:
@@ -92,23 +98,39 @@ def get_or_insert_web_user(email):
 
 
 def delete_web_user(email):
+    """
+    deletes webuser by email
+
+    .. caution:: Not yet functional!
+    """
     WebUser = Model.get('web.user')
     matching_user = WebUser.find(['email', "=", email])
     # TODO: delete
 
 
 def delete_content(filename):
+    """
+    deletes a content (file) record of an uploaded file (.wav, .pdf)
+
+    .. caution:: Not yet functional!
+    """    
     Content = Model.get('content')
     matching_content = Content.find(['uuid', "=", filename])
     # TODO: delete
 
 
 def get_obj_state(filename):
+    """
+    returns the state of objects inherited from the state mixin
+    """
     matching_content = get_content_by_filename(filename)
     return matching_content.processing_state
 
 
 def set_content_unknown(filename):
+    """
+    sets a content record's processing_state to unknown
+    """
     matching_content = get_content_by_filename(filename)
     matching_content.processing_state = "unknown"
     matching_content.save()
