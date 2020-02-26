@@ -9,8 +9,6 @@ The one and only C3S repertoire processing utility
 
 # --- Imports ---
 
-
-import sys
 import os
 import time
 import fcntl
@@ -107,8 +105,8 @@ assert(ECHOPRINT_HOSTNAME)
 ECHOPRINT_PORT = ECHOPRINT_CONFIG['port']
 if not ECHOPRINT_PORT:
     ECHOPRINT_PORT = 80  
-ECHOPRINT_URL = (ECHOPRINT_SCHEMA + "://" + ECHOPRINT_HOSTNAME + ":" + 
-                ECHOPRINT_PORT)
+ECHOPRINT_URL = (ECHOPRINT_SCHEMA + "://" + ECHOPRINT_HOSTNAME + ":" +
+                 ECHOPRINT_PORT)
 
 HOSTNAME = socket.gethostname()
 STORAGE_BASE_PATH = FILEHANDLING_CONFIG['storage_base_path']
@@ -126,7 +124,7 @@ def preview_audiofile(srcdir, destdir, filename):
     content_base_path = FILEHANDLING_CONFIG['content_base_path']
     if ensure_path_exists(content_base_path) is None:
         print("ERROR: '" + content_base_path +
-            "' couldn't be created as content base path.")
+              "' couldn't be created as content base path.")
         return
 
     # create directories in absolute paths if needed
@@ -142,8 +140,8 @@ def preview_audiofile(srcdir, destdir, filename):
             os.path.join(content_base_path, previews_path)
     ) is None:
         print("ERROR: '" +
-            os.path.join(content_base_path, previews_path) +
-            "' couldn't be created for previews.")
+              os.path.join(content_base_path, previews_path) +
+              "' couldn't be created for previews.")
         return
     if ensure_path_exists(
             os.path.join(content_base_path, excerpts_path)
@@ -214,7 +212,9 @@ def preview_audiofile(srcdir, destdir, filename):
                                     stdout=subprocess.PIPE)
         except OSError:
             print(
-                "Error: Unable to find echoprint-codegen executable in exe path.")
+                "Error: Unable to find echoprint-codegen executable in exe "
+                "path."
+            )
             return
         json_meta_fp = proc.communicate()[0]
         fpcode_pos = json_meta_fp.find('"code":')
@@ -324,11 +324,14 @@ def preview_audiofile(srcdir, destdir, filename):
                 song = taglib.File(filepath_plus_extension)
                 if song.tags:
                     if u"ARTIST" in song.tags and song.tags[u"ARTIST"][0]:
-                        matching_content.metadata_artist = song.tags["ARTIST"][0]
+                        matching_content.metadata_artist = song.tags[
+                                                           "ARTIST"][0]
                     if u"TITLE" in song.tags and song.tags[u"TITLE"][0]:
-                        matching_content.metadata_title = song.tags["TITLE"][0]
+                        matching_content.metadata_title = song.tags["TITLE"][
+                                                          0]
                     if u"ALBUM" in song.tags and song.tags[u"ALBUM"][0]:
-                        matching_content.metadata_release = song.tags["ALBUM"][0]
+                        matching_content.metadata_release = song.tags["ALBUM"][
+                                                            0]
                     if u"TDOR" in song.tags and song.tags[u"TDOR"][0]:
                         matching_content.metadata_release_date = song.tags[
                             "TDOR"][0]
@@ -340,8 +343,8 @@ def preview_audiofile(srcdir, destdir, filename):
                             "TRACKNUMBER"][0]
             except OSError:
                 print(
-                    "WARNING: taglib couldn't extract any metadata from file '" +
-                    filepath_plus_extension +
+                    "WARNING: taglib couldn't extract any metadata from file '"
+                    + filepath_plus_extension +
                     "' "
                 )
             try:
@@ -364,7 +367,7 @@ def preview_audiofile(srcdir, destdir, filename):
 
         matching_content.save()
 
-        # check it the audio format is much too crappy even for 8bit enthusiasts
+        # check it the audio format is much too bad even for 8bit enthusiasts
         reason_details = ''
         if audio.frame_rate < 11025:
             reason_details = (
@@ -620,14 +623,15 @@ def fingerprint_audiofile(srcdir, destdir, filename):
     matching_content = trytonAccess.get_content_by_filename(filename)
     if matching_content is None:
         return
- 
+
     if matching_content.category == 'audio':
         # already metadata present in creation?
         # then put it on the EchoPrint server rightaway
         artist = ''
         title = ''
         release = ''
-        matching_creation = trytonAccess.get_creation_by_content(matching_content)
+        matching_creation = trytonAccess.get_creation_by_content(
+                            matching_content)
         if matching_creation:
             artist = matching_creation.artist.name
             title = matching_creation.title
@@ -833,7 +837,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
             print(
                 "Body: " +
                 (query_request.text[:500] + '...' + query_request.text[-1500:]
-                if len(query_request.text) > 2000 else query_request.text)
+                 if len(query_request.text) > 2000 else query_request.text)
             )
             if query_request.status_code != 200:
                 print(
@@ -888,7 +892,9 @@ def fingerprint_audiofile(srcdir, destdir, filename):
                     filepath)
             else:
                 if (
-                    track_id_from_test_query == matching_content.most_similiar_content.uuid
+                    track_id_from_test_query
+                    ==
+                    matching_content.most_similiar_content.uuid
                 ):
                     matching_content.pre_ingest_excerpt_score = 0
 
