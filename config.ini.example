@@ -6,11 +6,12 @@ debugger_winpdb=${DEBUGGER_WINPDB}
 host     = ${TRYTON_HOSTNAME}
 port     = ${TRYTON_PORT}
 database = ${PROJECT}
-user     = admin
-password = admin 
+user     = ${WORKER_PROTEUS_USER}
+password = ${WORKER_PROTEUS_PASSWORD}
 
 [archivehandling]
 # predefined constants for source an destination host
+# TODO: integrate into .env and services/worker.env & update README
 srcuser = c3s
 srcpw = c3s_secretpassword_on_srchost_PLEASE_CHANGE!
 srchost = localhost
@@ -29,17 +30,18 @@ token = ${ECHOPRINT_TOKEN}
 [filehandling]
 # reduces filesize of dropped files by replacing their content with the filename
 # set to yes for test purposes to save space on test machine
-disembody_dropped_files=no
+disembody_dropped_files=${WORKER_DISEMBODY_DROPPED_FILES}
 # prohibit others from ingesting fingerprints into the EchoPrint server:
 # (look on the echoprint server API/api.py in class ingest, line 42)
 echoprint_server_token=${ECHOPRINT_SERVER_TOKEN}
 # here goes the static content for the web service (below are the subpaths)
-# this path needs to correspond wiht API_C3SUPLOAD_FILEPATH in api.env!
-content_base_path=/ado/tmp/upload
+# this path needs to correspond wiht API_C3SUPLOAD_CONTENTBASEPATH in .env!
+content_base_path=${API_C3SUPLOAD_CONTENTBASEPATH}
 previews_path=previews
 excerpts_path=excerpts
 # this is the mount for the repertoire processor (below are the subpaths) 
-storage_base_path=/ado/tmp/upload
+# this path needs to correspond wiht API_C3SUPLOAD_STORAGEBASEPATH in .env!
+storage_base_path=${API_C3SUPLOAD_STORAGEBASEPATH}
 rejected_path=rejected
 uploaded_path=uploaded
 rejected_path=rejected
