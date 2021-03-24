@@ -13,7 +13,6 @@ import ConfigParser
 import unittest
 
 from collecting_society_worker import (
-    fileTools,
     archive_proc,
     trytonAccess
 )
@@ -41,12 +40,15 @@ class TestArchiveProc(unittest.TestCase):
         self.srcdir_closed = self.aconf["srcdir"] + ".closed"
 
         # prepare folder contents
-        self.example_files = [["testuser1", "uuid1"],
-                        ["testuser2", "uuid2"]]
+        self.example_files = [
+            ["testuser1", "uuid1"],
+            ["testuser2", "uuid2"]]
         self.checks_file = ".checksum"
         self.checks_all = ".checksums"
-        self.rmdirs = [self.aconf["srcdir"], self.srcdir_closed,
-                       self.aconf["destdir"]]
+        self.rmdirs = [
+            self.aconf["srcdir"],
+            self.srcdir_closed,
+            self.aconf["destdir"]]
 
     def setUp(self):
         self.tearDown()

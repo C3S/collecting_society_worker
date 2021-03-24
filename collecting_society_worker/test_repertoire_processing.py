@@ -1,21 +1,18 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # For copyright and license terms, see COPYRIGHT.rst (top level of repository)
-# Repository: ...
+# Repository: https://github.com/C3S/collecting_society_worker
 
 """Test the archive processing
 tryton service for c3s.ado.repertoire has to be
 running and accessible to run these tests.
 """
 
-import subprocess
 import ConfigParser
 import unittest
 
 import trytonAccess
-import fileTools
 import repro
 
-import click
 from click.testing import CliRunner
 
 
@@ -40,7 +37,6 @@ class TestRepertoireProcessing(unittest.TestCase):
     def _create_correct_example_data(self):
         trytonAccess.connect(pconf)
 
-
     def _delete_correct_example_data(self):
         trytonAccess.connect(pconf)
 
@@ -63,6 +59,7 @@ class TestRepertoireProcessing(unittest.TestCase):
 
         runner.invoke(repro.drop)
         assert False
+
 
 if __name__ == '__main__':
     runner = CliRunner()

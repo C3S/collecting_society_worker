@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # For copyright and license terms, see COPYRIGHT.rst (top level of repository)
-# Repository: ...
+# Repository: https://github.com/C3S/collecting_society_worker
 
 """
 The one and only C3S repertoire processing utility
@@ -104,7 +104,7 @@ ECHOPRINT_HOSTNAME = ECHOPRINT_CONFIG['hostname']
 assert(ECHOPRINT_HOSTNAME)
 ECHOPRINT_PORT = ECHOPRINT_CONFIG['port']
 if not ECHOPRINT_PORT:
-    ECHOPRINT_PORT = 80  
+    ECHOPRINT_PORT = 80
 ECHOPRINT_URL = (ECHOPRINT_SCHEMA + "://" + ECHOPRINT_HOSTNAME + ":" +
                  ECHOPRINT_PORT)
 
@@ -166,7 +166,7 @@ def preview_audiofile(srcdir, destdir, filename):
     # find content in database from filename
     try:
         matching_content = trytonAccess.get_content_by_filename(filename)
-    except:
+    except Exception:
         print("ERROR: Database seems to be under rebuild. Trying again later.")
         exit()
     if matching_content is None:
@@ -232,7 +232,7 @@ def preview_audiofile(srcdir, destdir, filename):
                     meta_fp[0]['code'].encode('utf8'),
                     verify=False,  # TO DO: remove when cert. is updated
                 )
-            except:
+            except Exception:
                 print(
                     "ERROR: '" + excerpts_filepath_relative +
                     "' couldn't be test-queried on the EchoPrint server.")
@@ -247,8 +247,8 @@ def preview_audiofile(srcdir, destdir, filename):
             print(
                 "Body: " +
                 (query_request.text[:500] +
-                '...' + query_request.text[-1500:]
-                if len(query_request.text) > 2000 else query_request.text)
+                 '...' + query_request.text[-1500:]
+                 if len(query_request.text) > 2000 else query_request.text)
             )
 
             if query_request.status_code != 200:
@@ -441,7 +441,7 @@ def create_preview(audio, preview_path):
                 "-ar", _preview_samplerate
             ]
         )
-    except:
+    except Exception:
         ok_return = False
 
     return ok_return and os.path.isfile(preview_path)
@@ -497,7 +497,7 @@ def create_excerpt(audio, excerpt_path):
                 "-ar", _excerpt_samplerate
             ]
         )
-    except:
+    except Exception:
         ok_return = False
 
     return ok_return and os.path.isfile(excerpt_path)
@@ -565,7 +565,7 @@ def checksum_audiofile(srcdir, destdir, filename):
             "WARNING: File '" +
             filename +
             "' in the previewed folder had status '" +
-            matching_content.processing_state + "'.")    
+            matching_content.processing_state + "'.")
     if (matching_content.processing_state != 'previewed' and
             matching_content.processing_state != 'uploaded' and
             matching_content.category == 'sheet'):
@@ -767,8 +767,8 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         # (1st was before ingest, during preview)
         score = 0
         track_id_from_test_query = ''
-        similiar_artist = ''
-        similiar_track = ''
+        # similiar_artist = ''
+        # similiar_track = ''
 
         # make sure previews and excerpts paths exist
         content_base_path = FILEHANDLING_CONFIG['content_base_path']
@@ -821,7 +821,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
                     meta_fp[0]['code'].encode('utf8'),
                     verify=False,  # TO DO: remove when cert. is updated
                 )
-            except:
+            except Exception:
                 print(
                     "ERROR: '" +
                     excerpts_filepath_relative +
@@ -856,8 +856,8 @@ def fingerprint_audiofile(srcdir, destdir, filename):
                         qresult['track_id'][12:16] +
                         '-' +
                         qresult['track_id'][16:])
-                    similiar_artist = qresult['artist']
-                    similiar_track = qresult['track']
+                    # similiar_artist = qresult['artist']
+                    # similiar_track = qresult['track']
         else:
             print("Got from codegen:" + json_meta_fp)
 
@@ -999,7 +999,7 @@ def drop_audiofile(srcdir, destdir, filename):
             "WARNING: File '" +
             filename +
             "' in the fingerprinted folder had status '" +
-            matching_content.processing_state + "'.")           
+            matching_content.processing_state + "'.")
     matching_content.processing_state = 'dropped'
     matching_content.processing_hostname = HOSTNAME
     matching_content.path = filepath.replace(
@@ -1234,7 +1234,7 @@ def checksum():
         )
     )
 
-    
+
 @repro.command('fingerprint')
 # @click.pass_context
 def fingerprint():
@@ -1360,7 +1360,7 @@ def connect_db():
 
 
 if __name__ == '__main__':
-    
+
     # ensure storage path
     if ensure_path_exists(STORAGE_BASE_PATH) is None:
         print(

@@ -11,17 +11,14 @@ import os
 import shutil
 import uuid
 import tempfile
-import subprocess
-import ConfigParser
 import unittest
 import requests
 import datetime
 import random
 import json
 
-from proteus import config, Model
+from proteus import Model
 from collecting_society_worker import (
-    fileTools,
     trytonAccess,
     repro
 )
@@ -29,6 +26,7 @@ from collecting_society_worker import (
 test_uuid = str(uuid.uuid4())  # like "540e8400-e29b-11d4-a716-476655440123"
 tmp1 = tempfile.mkdtemp()
 tmp2 = tempfile.mkdtemp()
+
 
 class TestProcessing(unittest.TestCase):
 
@@ -51,11 +49,9 @@ class TestProcessing(unittest.TestCase):
         self.url = repro.ECHOPRINT_URL + "/query"
         self.var_id = "fp_code"
         self.fingerprint = open(os.path.join(self.testdatafolder,
-                                "NIN-19GhostsIII.fingerprint"),"r").read()
+                                "NIN-19GhostsIII.fingerprint"), "r").read()
 
-
-
-         # make sure previews and excerpts paths exist
+        # make sure previews and excerpts paths exist
         self.content_base_path = repro.FILEHANDLING_CONFIG['content_base_path']
         if repro.ensure_path_exists(self.content_base_path) is None:
             print(
@@ -74,15 +70,16 @@ class TestProcessing(unittest.TestCase):
             test_uuid[1])
 
         # create excerpt paths with filenames
-        excerpts_filepath_relative = os.path.join(self.excerpts_path, test_uuid)
+        excerpts_filepath_relative = os.path.join(
+            self.excerpts_path, test_uuid)
         self.excerpts_filepath = os.path.join(
             self.content_base_path,
             excerpts_filepath_relative
-        )   
+        )
 
         # create preview paths with filenames
-        previews_filepath_relative = os.path.join(self.previews_path, 
-            test_uuid)
+        previews_filepath_relative = os.path.join(
+            self.previews_path, test_uuid)
         self.previews_filepath = os.path.join(
             self.content_base_path,
             previews_filepath_relative
@@ -96,7 +93,8 @@ class TestProcessing(unittest.TestCase):
         self.target_filepath = os.path.join(self.targetfolder, test_uuid)
         if os.path.isfile(self.source_filepath):
             os.unlink(self.source_filepath)
-        shutil.copyfile(os.path.join(self.testdatafolder, original_filename),
+        shutil.copyfile(
+            os.path.join(self.testdatafolder, original_filename),
             self.source_filepath)
 
         # TODO: no clue how to delete a webuser
@@ -133,12 +131,12 @@ class TestProcessing(unittest.TestCase):
         self.web_user.party.name = firstname + ' ' + lastname
         self.web_user.party.repertoire_terms_accepted = True
         self.web_user.party.birthdate = birthdate
-        self.web_user.party.save()        
+        self.web_user.party.save()
 
         # create content database entry
         find_content = self.Content.find(['uuid', "=", test_uuid])
         if find_content:
-            self.Content.delete(find_content[0])  # clean up db, just in case        
+            self.Content.delete(find_content[0])  # clean up db, just in case
         self.c = self.Content()
         self.c.uuid = test_uuid
         self.c.commit_state = 'uncommited'
@@ -155,9 +153,9 @@ class TestProcessing(unittest.TestCase):
         self.c.preview_path = '/some/preview/path'
         self.c.save()
 
-        self.assertTrue(trytonAccess.get_content_by_filename(test_uuid),
+        self.assertTrue(
+            trytonAccess.get_content_by_filename(test_uuid),
             "content record coudn't be added to the database")
-
 
     @classmethod
     def setUpClass(cls):
@@ -169,7 +167,6 @@ class TestProcessing(unittest.TestCase):
     def tearDown(self):
         pass
 
-
     # TODO: fix
     def _test_005_query_existing_fingerprint(self):
         """
@@ -180,22 +177,24 @@ class TestProcessing(unittest.TestCase):
         url = repro.ECHOPRINT_URL + "/query"
         var_id = "fp_code"
         fp_file = open(os.path.join(self.testdatafolder,
-                       "michael_jackson_-_billie_jean.fingerprint"),"r")
+                       "michael_jackson_-_billie_jean.fingerprint"), "r")
         fingerprint = fp_file.read()
 
         # query_request = requests.get(url + "?" + id + '=' + fingerprint
         #     .encode('utf8'), verify=False
         # )
-        query_request = requests.post(url,
-            data = { var_id: fingerprint.encode('utf8') }, verify=False
+        query_request = requests.post(
+            url, data={var_id: fingerprint.encode('utf8')}, verify=False
         )
 
-        self.assertEqual(query_request.status_code, 200,
+        self.assertEqual(
+            query_request.status_code, 200,
             "status code returned from server is not 200 but " +
             str(query_request.status_code) + " -- " +
             query_request.reason)
         qresult = json.loads(query_request.text)
-        self.assertGreaterEqual(int(qresult['score']), 50,
+        self.assertGreaterEqual(
+            int(qresult['score']), 50,
             "score from EchoPrintServer result is too low (" +
             str(qresult['score']) + ")")
         self.assertEqual(qresult['track_id'], "TRWIZHB123E858D912")
@@ -207,7 +206,6 @@ class TestProcessing(unittest.TestCase):
             "please change the token in services/worker.env "
             "according to the one in API.py on the EchoPrint server."
         )
-
 
     # TODO: fix deletion of a fingerprint on the echoprint server
     #       (step through server code as soon as ptvsd 5 is available!)
@@ -221,10 +219,11 @@ class TestProcessing(unittest.TestCase):
         var_id = "track_id"
         track = "TRWIZHB123E858D912"
 
-        query_request = requests.post(url,
-            data = { var_id: track }, verify=False
+        query_request = requests.post(
+            url, data={var_id: track}, verify=False
         )
-        self.assertEqual(query_request.status_code, 200,
+        self.assertEqual(
+            query_request.status_code, 200,
             "status code returned from server is not 200 but " +
             str(query_request.status_code) + " -- " +
             query_request.reason)
@@ -241,22 +240,25 @@ class TestProcessing(unittest.TestCase):
     def _test_020_query_before_ingestion(self):
         """
         query non-existing print (before ingestion)
-        """       
-
+        """
         # query before ingestion -- result should be negative
-        query_request = requests.post(self.url,
-            data = { self.var_id: self.fingerprint.encode('utf8') }, verify=False
+        query_request = requests.post(
+            self.url, data={self.var_id: self.fingerprint.encode('utf8')},
+            verify=False
         )
-        self.assertEqual(query_request.status_code, 200,
+        self.assertEqual(
+            query_request.status_code, 200,
             "status code returned from server is not 200 but " +
             str(query_request.status_code) + " -- " +
             query_request.reason)
         qresult = json.loads(query_request.text)
-        self.assertEqual(int(qresult['score']), 0,
+        self.assertEqual(
+            int(qresult['score']), 0,
             "query for not existing fingerprint should result in a score of 0"
             " but actually is " + str(qresult['score']))
-        self.assertEqual(qresult['match'], False,
-            "false positive match from query to EchoPrint server") 
+        self.assertEqual(
+            qresult['match'], False,
+            "false positive match from query to EchoPrint server")
 
     def _reload_sourcefolder(self):
         """
@@ -268,7 +270,7 @@ class TestProcessing(unittest.TestCase):
             "File wasn't moved to the target folder")
         self.assertFalse(
             os.path.isfile(os.path.join(self.sourcefolder, test_uuid)),
-            "File still is in the source folder") 
+            "File still is in the source folder")
         self.assertTrue(
             repro.move_file(
                 os.path.join(self.targetfolder, test_uuid),
@@ -281,10 +283,10 @@ class TestProcessing(unittest.TestCase):
         """
         preview processing stage: create a preview and excerpt from audio file
         """
-
-        repro.preview_audiofile(self.sourcefolder, 
-            self.targetfolder, test_uuid)
-        self.assertTrue(os.path.isfile(self.previews_filepath),
+        repro.preview_audiofile(
+            self.sourcefolder, self.targetfolder, test_uuid)
+        self.assertTrue(
+            os.path.isfile(self.previews_filepath),
             "no preview file was created")
         self._reload_sourcefolder()
 
@@ -292,10 +294,10 @@ class TestProcessing(unittest.TestCase):
         """
         checksum processing stage: create a checksum from audio file
         """
-
-        repro.checksum_audiofile(self.sourcefolder, 
-            self.targetfolder, test_uuid)
-        self.assertTrue(os.path.isfile(self.target_filepath + ".checksum"),
+        repro.checksum_audiofile(
+            self.sourcefolder, self.targetfolder, test_uuid)
+        self.assertTrue(
+            os.path.isfile(self.target_filepath + ".checksum"),
             "no checksum file was created")
         # TODO: further checking, i.e. file checksum with db entry
         self._reload_sourcefolder()
@@ -305,26 +307,28 @@ class TestProcessing(unittest.TestCase):
         fingerprint processing stage and query after ingestion
         """
 
-        repro.fingerprint_audiofile(self.sourcefolder, 
-            self.targetfolder, test_uuid)
+        repro.fingerprint_audiofile(
+            self.sourcefolder, self.targetfolder, test_uuid)
 
         # query after ingestion -- result should be positive
-        query_request = requests.post(self.url,
-            data = { self.id: self.fingerprint.encode('utf8') }, verify=False
+        query_request = requests.post(
+            self.url, data={self.id: self.fingerprint.encode('utf8')},
+            verify=False
         )
 
-        self.assertEqual(query_request.status_code, 200,
+        self.assertEqual(
+            query_request.status_code, 200,
             "status code returned from server is not 200 but " +
             str(query_request.status_code) + " -- " +
             query_request.reason)
         qresult = json.loads(query_request.text)
-        self.assertGreaterEqual(int(qresult['score']), 50,
+        self.assertGreaterEqual(
+            int(qresult['score']), 50,
             "score from EchoPrintServer result is too low (" +
             str(qresult['score']) + ") -- message from server: '" +
             qresult['message'] + "'")
-        self.assertEqual(qresult['track_id'], 
-            test_uuid.replace('-', ''))
-        self._reload_sourcefolder()                 
+        self.assertEqual(qresult['track_id'], test_uuid.replace('-', ''))
+        self._reload_sourcefolder()
 
     def test_900_cleanup(self):
         """
@@ -334,8 +338,8 @@ class TestProcessing(unittest.TestCase):
         #       Fault 1: "('UserError', ('foreign_model_exist', ''))"
         # self.Content.delete(self.c)
 
-        #self.WebUser.delete(self.web_user)
-        #self.WebUser.delete(self.web_user.party)
+        # self.WebUser.delete(self.web_user)
+        # self.WebUser.delete(self.web_user.party)
 
         if os.path.isfile(self.source_filepath):
             os.unlink(self.source_filepath)
@@ -355,6 +359,6 @@ class TestProcessing(unittest.TestCase):
         if os.path.isdir(self.excerpts_path):
             os.rmdir(self.excerpts_path)
         if os.path.isfile(self.previews_filepath):
-            os.unlink(self.previews_filepath)        
+            os.unlink(self.previews_filepath)
         if os.path.isdir(self.previews_path):
             os.rmdir(self.previews_path)

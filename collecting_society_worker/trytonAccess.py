@@ -1,6 +1,6 @@
-#!/usr/bin/python
+#!/usr/bin/env python
 # For copyright and license terms, see COPYRIGHT.rst (top level of repository)
-# Repository: ...
+# Repository: https://github.com/C3S/collecting_society_worker
 
 """
 The one and only C3S proteus tools for accessing data in C3S tryton db
@@ -32,14 +32,14 @@ def get_content_by_filename(filename):
     Content = Model.get('content')
     matching_contents = Content.find(['uuid', "=", filename])
     if len(matching_contents) == 0:
-        print "ERROR: Wasn't able to find content entry in the database " \
-              "for '" + filename + "'."
+        print("ERROR: Wasn't able to find content entry in the database "
+              "for '" + filename + "'.")
         return None
     if len(matching_contents) > 1:
         # unlikely with uuids, but we are
         # supersticious...
-        print "WARNING: More than one content entry in the database for '" \
-              + filename + "'. Using the first one."
+        print("WARNING: More than one content entry in the database for '"
+              + filename + "'. Using the first one.")
     return matching_contents[0]
 
 
@@ -50,13 +50,13 @@ def get_creation_by_content(content):
     Creation = Model.get('creation')
     matching_creations = Creation.find(['id', "=", content.id])
     if len(matching_creations) == 0:
-        print "ERROR: Wasn't able to find creation entry in the database " \
-              "with id '" + str(content.id) + "' for file '" \
-              + content.uuid + "'."
+        print("ERROR: Wasn't able to find creation entry in the database "
+              "with id '" + str(content.id) + "' for file '"
+              + content.uuid + "'.")
         return None
     if len(matching_creations) > 1:
-        print "WARNING: More than one content entry in the database for '" \
-              + content.uuid + "'. Using the first one."
+        print("WARNING: More than one content entry in the database for '"
+              + content.uuid + "'. Using the first one.")
     return matching_creations[0]
 
 
@@ -84,7 +84,7 @@ def update_content_pstate(filename, pstate):
 
 def get_or_insert_web_user(email):
     """
-    Finds a web user by email; 
+    Finds a web user by email;
     if she doesn't exist, she will be created and returned
     """
     WebUser = Model.get('web.user')
@@ -103,9 +103,10 @@ def delete_web_user(email):
 
     .. caution:: Not yet functional!
     """
-    WebUser = Model.get('web.user')
-    matching_user = WebUser.find(['email', "=", email])
     # TODO: delete
+    # WebUser = Model.get('web.user')
+    # matching_user = WebUser.find(['email', "=", email])
+    pass
 
 
 def delete_content(filename):
@@ -113,10 +114,11 @@ def delete_content(filename):
     deletes a content (file) record of an uploaded file (.wav, .pdf)
 
     .. caution:: Not yet functional!
-    """    
-    Content = Model.get('content')
-    matching_content = Content.find(['uuid', "=", filename])
+    """
     # TODO: delete
+    # Content = Model.get('content')
+    # matching_content = Content.find(['uuid', "=", filename])
+    pass
 
 
 def get_obj_state(filename):
