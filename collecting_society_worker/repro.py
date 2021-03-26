@@ -1355,7 +1355,7 @@ def connect_db():
                 print(
                     "Database connection could not be established "
                     "(yet), skipping file processing ... %s" % e)
-                exit()
+                exit(1)
             time.sleep(1)
 
 
