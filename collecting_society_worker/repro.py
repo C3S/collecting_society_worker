@@ -901,8 +901,8 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         matching_content.save()
 
         # TO DO: user access control
-        Fingerprintlog = Model.get('content.fingerprintlog')
-        new_logentry = Fingerprintlog()
+        FingerprintLog = Model.get('content.fingerprintlog')
+        new_logentry = FingerprintLog()
         user = Model.get('res.user')
         matching_users = user.find(['login', '=', 'admin'])
         if not matching_users:
@@ -918,6 +918,10 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         else:
             new_logentry.fingerprinting_version = (
                 "unknown (check if echoprint access token was set properly!)")
+        new_logentry.entity_origin = 'direct'
+        Party = Model.get('party.party')
+        party = Party.find(['name', '=', 'C3S SCE'])[0]
+        new_logentry.entity_creator = party
         new_logentry.save()
 
         # TO DO: check newly ingested fingerprint using the excerpt
