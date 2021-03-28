@@ -92,9 +92,6 @@ except ConfigParser.NoSectionError:
         "from the collecting_society_worker main folder.")
     exit()
 
-if os.environ.get('ENVIRONMENT') == 'testing':
-    PROTEUS_CONFIG['database'] += '_test'
-
 FILEHANDLING_CONFIG = expand_envvars(dict(CONFIGURATION.items('filehandling')))
 
 ECHOPRINT_CONFIG = expand_envvars(dict(CONFIGURATION.items('echoprint')))
