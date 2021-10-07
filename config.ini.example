@@ -42,7 +42,6 @@ excerpts_path=excerpts
 # this is the mount for the repertoire processor (below are the subpaths)
 # this path needs to correspond wiht API_C3SUPLOAD_STORAGEBASEPATH in .env!
 storage_base_path=${WEBAPI_STORAGE}
-rejected_path=rejected
 uploaded_path=uploaded
 rejected_path=rejected
 previewed_path=previewed
