@@ -119,9 +119,9 @@ class TestProcessing(unittest.TestCase):
         firstname = "John"
         lastname = "Doe"
         self.web_user = self.WebUser(
-            email='john.doe' + str(random.randint(0, 2000000)) + '@rep.test',
+            email='john.doe' + str(random.randint(0, 99999999)) + '@rep.test',
             nickname=firstname + ' ' + lastname,
-            password="%s" % random.randint(0, 2000000),
+            password="password123",
             opt_in_state='opted-in'
         )
         self.web_user.default_role = 'licenser'
@@ -136,7 +136,7 @@ class TestProcessing(unittest.TestCase):
         # create content database entry
         find_content = self.Content.find(['uuid', "=", test_uuid])
         if find_content:
-            self.Content.delete(find_content[0])  # clean up db, just in case
+            self.Content.delete(find_content)  # clean up db, just in case
         self.c = self.Content()
         self.c.uuid = test_uuid
         self.c.commit_state = 'uncommited'
