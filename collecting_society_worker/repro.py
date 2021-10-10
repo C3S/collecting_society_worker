@@ -14,8 +14,7 @@ import time
 import fcntl
 import socket
 import subprocess
-import ConfigParser
-import ssl
+import configparser
 import json
 import datetime
 import re
@@ -25,15 +24,11 @@ import requests
 from pydub import AudioSegment
 import taglib
 from proteus import config, Model
-import trytonAccess
+try:
+    import trytonAccess
+except Exception:
+    from . import trytonAccess
 # import fileTools
-
-# fix for self-signed certificates
-if os.environ.get('ENVIRONMENT') != 'production':
-    if hasattr(ssl, '_create_unverified_context'):
-        ssl._create_default_https_context = ssl._create_unverified_context
-        # print "WARNING: fix for self-signed certificates activated"
-
 
 # --- some constants ---
 
@@ -58,12 +53,12 @@ _excerpt_segment_duration = 60000
 
 def expand_envvars(section):
     return dict(
-        (k, os.path.expandvars(v)) for k, v in section.iteritems()
+        (k, os.path.expandvars(v)) for k, v in section.items()
     )
 
 
 # read config from .ini
-CONFIGURATION = ConfigParser.ConfigParser()
+CONFIGURATION = configparser.ConfigParser()
 CONFIGURATION.read(
     os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
@@ -81,12 +76,12 @@ try:
         import ptvsd
         ptvsd.enable_attach(address=("0.0.0.0", 51002), redirect_output=True)
         # print("ptvsd debugger listening to port 51002.")
-except ConfigParser.NoSectionError:
+except configparser.NoSectionError:
     pass
 
 try:
     PROTEUS_CONFIG = expand_envvars(dict(CONFIGURATION.items('proteus')))
-except ConfigParser.NoSectionError:
+except configparser.NoSectionError:
     print(
         "Error: Please run repro.py "
         "from the collecting_society_worker main folder.")
@@ -213,7 +208,7 @@ def preview_audiofile(srcdir, destdir, filename):
                 "path."
             )
             return
-        json_meta_fp = proc.communicate()[0]
+        json_meta_fp = str(proc.communicate()[0], "utf-8")
         fpcode_pos = json_meta_fp.find('"code":')
         if fpcode_pos > 0 and len(json_meta_fp) > 80:
             print(
@@ -226,10 +221,11 @@ def preview_audiofile(srcdir, destdir, filename):
             try:
                 query_request = requests.get(
                     ECHOPRINT_URL + "/query?fp_code=" +
-                    meta_fp[0]['code'].encode('utf8'),
-                    verify=False,  # TO DO: remove when cert. is updated
+                    meta_fp[0]['code'],
+                    verify=False,  # TODO: remove when cert. is updated
                 )
-            except Exception:
+            except Exception as e:
+                raise e
                 print(
                     "ERROR: '" + excerpts_filepath_relative +
                     "' couldn't be test-queried on the EchoPrint server.")
@@ -1091,7 +1087,6 @@ def move_file(source, target):
     """
     Moves a file from one path to another.
     """
-
     # check file
     if not os.path.isfile(source):
         return False
@@ -1110,8 +1105,8 @@ def move_file(source, target):
             os.rename(source + ".checksum", target + ".checksum")
         os.rename(source, target)
         # suppose we only have one mounted filesystem
-    except IOError:
-        pass
+    except IOError as e:
+        print(e)
     return os.path.isfile(target) and not os.path.isfile(source)
 
 
@@ -1339,15 +1334,17 @@ def connect_db():
     # data, as the first connection results in an unauthorized error, so
     # a second try has to be added.
     while tries < max_tries:
+        SCHEMA = "https"
+        if os.environ.get('ENVIRONMENT') in ['development', 'testing']:
+            SCHEMA = "http"
         try:
             config.set_xmlrpc(
-                "https://" + PROTEUS_CONFIG['user'] +
-                ":" +
+                SCHEMA + "://" +
+                PROTEUS_CONFIG['user'] + ":" +
                 PROTEUS_CONFIG['password'] +
                 "@" + PROTEUS_CONFIG['host'] +
                 ":" + PROTEUS_CONFIG['port'] +
-                "/" +
-                PROTEUS_CONFIG['database']
+                "/" + PROTEUS_CONFIG['database'] + "/"
             )
             break
         except Exception as e:
