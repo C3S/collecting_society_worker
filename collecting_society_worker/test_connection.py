@@ -7,6 +7,6 @@ Script to test the proteus connection
 """
 
 # test
-from repro import connect_db
+from .repro import connect_db
 
 connect_db()

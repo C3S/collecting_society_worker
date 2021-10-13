@@ -7,13 +7,18 @@
 import os
 import subprocess
 import socket
-import ConfigParser
-import trytonAccess
-import fileTools
+import configparser
+
+try:
+    import trytonAccess
+    import fileTools
+except Exception:
+    from . import trytonAccess
+    from . import fileTools
 
 
 # --- read config from .ini
-CONFIGURATION = ConfigParser.ConfigParser()
+CONFIGURATION = configparser.ConfigParser()
 CONFIGURATION.read(
     os.path.join(
         os.path.dirname(os.path.abspath(__file__)),

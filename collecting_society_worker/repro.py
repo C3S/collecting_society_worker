@@ -316,21 +316,21 @@ def preview_audiofile(srcdir, destdir, filename):
             try:
                 song = taglib.File(filepath_plus_extension)
                 if song.tags:
-                    if u"ARTIST" in song.tags and song.tags[u"ARTIST"][0]:
+                    if "ARTIST" in song.tags and song.tags["ARTIST"][0]:
                         matching_content.metadata_artist = song.tags[
                                                            "ARTIST"][0]
-                    if u"TITLE" in song.tags and song.tags[u"TITLE"][0]:
+                    if "TITLE" in song.tags and song.tags["TITLE"][0]:
                         matching_content.metadata_title = song.tags["TITLE"][
                                                           0]
-                    if u"ALBUM" in song.tags and song.tags[u"ALBUM"][0]:
+                    if "ALBUM" in song.tags and song.tags["ALBUM"][0]:
                         matching_content.metadata_release = song.tags["ALBUM"][
                                                             0]
-                    if u"TDOR" in song.tags and song.tags[u"TDOR"][0]:
+                    if "TDOR" in song.tags and song.tags["TDOR"][0]:
                         matching_content.metadata_release_date = song.tags[
                             "TDOR"][0]
                     if (
-                            u"TRACKNUMBER" in song.tags and
-                            song.tags[u"TRACKNUMBER"][0]
+                            "TRACKNUMBER" in song.tags and
+                            song.tags["TRACKNUMBER"][0]
                     ):
                         matching_content.metadata_track_number = song.tags[
                             "TRACKNUMBER"][0]
