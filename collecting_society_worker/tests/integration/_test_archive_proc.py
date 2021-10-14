@@ -9,7 +9,7 @@ running and accessible to run these tests.
 
 import os
 import subprocess
-import ConfigParser
+import configparser
 import unittest
 
 from collecting_society_worker import (
@@ -24,7 +24,7 @@ class TestArchiveProc(unittest.TestCase):
         super(TestArchiveProc, self).__init__(*args, **kwargs)
 
         # --- read config from .ini
-        CONFIGURATION = ConfigParser.ConfigParser()
+        CONFIGURATION = configparser.ConfigParser()
         CONFIGURATION.read(
             os.path.join(
                 os.path.dirname(os.path.abspath(__file__)),

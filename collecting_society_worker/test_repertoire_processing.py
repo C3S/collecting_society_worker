@@ -7,17 +7,17 @@ tryton service for c3s.ado.repertoire has to be
 running and accessible to run these tests.
 """
 
-import ConfigParser
+import configparser
 import unittest
 
-import trytonAccess
-import repro
+from . import trytonAccess
+from . import repro
 
 from click.testing import CliRunner
 
 
 # --- read config from .ini
-CONFIGURATION = ConfigParser.ConfigParser()
+CONFIGURATION = configparser.ConfigParser()
 CONFIGURATION.read("config.ini")
 pconf = dict(CONFIGURATION.items('proteus'))
 
