@@ -71,11 +71,10 @@ try:
     if int(DEBUGGING_CONFIG['debugger_winpdb']):
         import rpdb2
         rpdb2.start_embedded_debugger("supersecret", fAllowRemote=True)
-    # ptvsd
-    if int(DEBUGGING_CONFIG['debugger_ptvsd']):
-        import ptvsd
-        ptvsd.enable_attach(address=("0.0.0.0", 51002), redirect_output=True)
-        # print("ptvsd debugger listening to port 51002.")
+    # debugpy
+    if int(DEBUGGING_CONFIG['debugger_debugpy']):
+        import debugpy  # unconditional import breaks test coverage
+        debugpy.listen(("0.0.0.0", 51002))
 except configparser.NoSectionError:
     pass
 
