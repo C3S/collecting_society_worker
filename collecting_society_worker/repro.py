@@ -1337,6 +1337,13 @@ def connect_db():
         if os.environ.get('ENVIRONMENT') in ['development', 'testing']:
             SCHEMA = "http"
         try:
+            cfg = SCHEMA + "://" + \
+                PROTEUS_CONFIG['user'] + ":" + \
+                PROTEUS_CONFIG['password'] + \
+                "@" + PROTEUS_CONFIG['host'] + \
+                ":" + PROTEUS_CONFIG['port'] + \
+                "/" + PROTEUS_CONFIG['database'] + "/"
+            print(cfg)
             config.set_xmlrpc(
                 SCHEMA + "://" +
                 PROTEUS_CONFIG['user'] + ":" +
@@ -1352,7 +1359,7 @@ def connect_db():
                 print(
                     "Database connection could not be established "
                     "(yet), skipping file processing ... %s" % e)
-                exit(1)
+                raise
             time.sleep(1)
 
 
