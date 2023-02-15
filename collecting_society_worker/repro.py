@@ -1350,10 +1350,9 @@ def connect_db():
         except Exception as e:
             tries += 1
             if tries == max_tries:
-                print(
+                exit(
                     "Database connection could not be established "
                     "(yet), skipping file processing ... %s" % e)
-                exit(1)
             time.sleep(1)
 
 
