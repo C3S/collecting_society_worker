@@ -9,7 +9,7 @@ with open(os.path.join(here, 'CHANGES.txt')) as f:
     CHANGES = f.read()
 
 install_requires = [
-    'proteus<6.1',
+    'proteus<6.7',
     'click>=4.0',
     'pyechonest>=9.0',
     'pydub>=0.18',

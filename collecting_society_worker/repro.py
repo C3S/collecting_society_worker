@@ -91,9 +91,9 @@ FILEHANDLING_CONFIG = expand_envvars(dict(CONFIGURATION.items('filehandling')))
 
 ECHOPRINT_CONFIG = expand_envvars(dict(CONFIGURATION.items('echoprint')))
 ECHOPRINT_SCHEMA = ECHOPRINT_CONFIG['schema']
-assert(ECHOPRINT_SCHEMA)
+assert ECHOPRINT_SCHEMA
 ECHOPRINT_HOSTNAME = ECHOPRINT_CONFIG['hostname']
-assert(ECHOPRINT_HOSTNAME)
+assert ECHOPRINT_HOSTNAME
 ECHOPRINT_PORT = ECHOPRINT_CONFIG['port']
 if not ECHOPRINT_PORT:
     ECHOPRINT_PORT = 80
@@ -1350,10 +1350,9 @@ def connect_db():
         except Exception as e:
             tries += 1
             if tries == max_tries:
-                print(
+                exit(
                     "Database connection could not be established "
                     "(yet), skipping file processing ... %s" % e)
-                exit(1)
             time.sleep(1)
 
 
