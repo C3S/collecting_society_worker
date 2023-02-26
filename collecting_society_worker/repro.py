@@ -74,7 +74,7 @@ try:
     # debugpy
     if int(DEBUGGING_CONFIG['debugger_debugpy']):
         import debugpy  # unconditional import breaks test coverage
-        debugpy.listen(("0.0.0.0", 51002))
+        debugpy.listen(("0.0.0.0", 52002))
 except configparser.NoSectionError:
     pass
 
