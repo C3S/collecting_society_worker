@@ -208,7 +208,7 @@ class TestProcessing(unittest.TestCase):
         )
 
     # TODO: fix deletion of a fingerprint on the echoprint server
-    #       (step through server code as soon as ptvsd 5 is available!)
+    #       (step through server code as debugpy has become available!)
     def _test_010_delete_a_fingerprint(self):
         """
         deleting a fingerprint that does already exists on the EchoPrint server
