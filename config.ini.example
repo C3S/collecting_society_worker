@@ -1,5 +1,5 @@
 [debugging]
-debugger_ptvsd=${DEBUGGER_PTVSD}
+debugger_debugpy=${DEBUGGER_DEBUGPY}
 debugger_winpdb=${DEBUGGER_WINPDB}
 
 [proteus]

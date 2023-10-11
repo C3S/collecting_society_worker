@@ -26,6 +26,9 @@ var/
 .installed.cfg
 *.egg
 
+# Tests
+collecting_society_worker/tests/.coverage
+
 # Visual Studio Code settings (though launch.json could be useful 
 #    to add '"args": ["get-jobs"],' to the Python config)
 .vscode/
