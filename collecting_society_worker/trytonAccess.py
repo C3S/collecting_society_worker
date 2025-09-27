@@ -48,7 +48,7 @@ def get_creation_by_content(content):
     Get a creation by content(.id).
     """
     Creation = Model.get('creation')
-    matching_creations = Creation.find(['id', "=", content.id])
+    matching_creations = Creation.find(['content.id', "=", content.id])
     if len(matching_creations) == 0:
         print("ERROR: Wasn't able to find creation entry in the database "
               "with id '" + str(content.id) + "' for file '"

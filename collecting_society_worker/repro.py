@@ -207,7 +207,7 @@ def preview_audiofile(srcdir, destdir, filename):
                 "path."
             )
             return
-        json_meta_fp = str(proc.communicate()[0], "utf-8")
+        json_meta_fp = proc.communicate()[0].decode()
         fpcode_pos = json_meta_fp.find('"code":')
         if fpcode_pos > 0 and len(json_meta_fp) > 80:
             print(
@@ -642,7 +642,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         proc = subprocess.Popen(
             ["echoprint-codegen", filepath],
             stdout=subprocess.PIPE)
-        json_meta_fp = proc.communicate()[0]
+        json_meta_fp = proc.communicate()[0].decode()
         fpcode_pos = json_meta_fp.find('"code":')
         if fpcode_pos > 0 and len(json_meta_fp) > 80:
             print(
@@ -670,7 +670,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
             'track_id': filename.replace('-', ''),
             # '-' reserved for fp segment
             'token': ECHOPRINT_CONFIG['token'],
-            'fp_code': meta_fp[0]['code'].encode('utf8'),
+            'fp_code': meta_fp[0]['code'],
             'artist': artist,
             'release': release,
             'track': title,
@@ -765,22 +765,16 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         # make sure previews and excerpts paths exist
         content_base_path = FILEHANDLING_CONFIG['content_base_path']
         if ensure_path_exists(content_base_path) is None:
-            print(
-                "ERROR: '" +
-                content_base_path +
-                "' couldn't be created as content base path."
-            )
+            print(f"ERROR: '{content_base_path}' couldn't be created as "
+                  "content base path.")
             return
 
-        excerpts_path = FILEHANDLING_CONFIG['excerpts_path']
-        if (
-                ensure_path_exists(excerpts_path) is None
-        ):
-            print(
-                "ERROR: '" +
-                excerpts_path +
-                "' couldn't be created for excerpts."
-            )
+        excerpts_path = os.path.join(
+            FILEHANDLING_CONFIG['excerpts_path'],
+            filename[0],
+            filename[1])
+        if ensure_path_exists(excerpts_path) is None:
+            print(f"ERROR: '{excerpts_path}' couldn't be created for excerpts")
             return
 
         # create excerpt paths with filenames
@@ -797,7 +791,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
         proc = subprocess.Popen(
             ["echoprint-codegen", excerpts_filepath],
             stdout=subprocess.PIPE)
-        json_meta_fp = proc.communicate()[0]
+        json_meta_fp = proc.communicate()[0].decode()
         fpcode_pos = json_meta_fp.find('"code":')
         if fpcode_pos > 0 and len(json_meta_fp) > 80:
             print(
@@ -810,7 +804,7 @@ def fingerprint_audiofile(srcdir, destdir, filename):
             try:
                 query_request = requests.get(
                     ECHOPRINT_URL + "/query?fp_code=" +
-                    meta_fp[0]['code'].encode('utf8'),
+                    meta_fp[0]['code'],
                     verify=False,  # TO DO: remove when cert. is updated
                 )
             except Exception:
