@@ -773,9 +773,6 @@ def fingerprint_audiofile(srcdir, destdir, filename):
             FILEHANDLING_CONFIG['excerpts_path'],
             filename[0],
             filename[1])
-        if ensure_path_exists(excerpts_path) is None:
-            print(f"ERROR: '{excerpts_path}' couldn't be created for excerpts")
-            return
 
         # create excerpt paths with filenames
         excerpts_filepath_relative = os.path.join(excerpts_path, filename)
@@ -783,6 +780,10 @@ def fingerprint_audiofile(srcdir, destdir, filename):
             content_base_path,
             excerpts_filepath_relative
         )
+        if ensure_path_exists(excerpts_filepath) is None:
+            print(f"ERROR: '{excerpts_filepath}' "
+                  "couldn't be created for excerpts")
+            return
 
         # create fringerprint from audio file
         # using echoprint-codegen and relate to the score
@@ -1134,13 +1135,6 @@ def reject_file(source, reason, reason_details):
         return
 
     rejected_path = FILEHANDLING_CONFIG['rejected_path']
-    if ensure_path_exists(rejected_path) is None:
-        print(
-            "ERROR: '" +
-            rejected_path +
-            "' couldn't be created for rejected files.")
-        return
-
     filename = os.sep.join(
         source.rsplit(os.sep, 2)[-2:])
     # get user-id/filename from source path
@@ -1150,6 +1144,12 @@ def reject_file(source, reason, reason_details):
     rejected_filepath = os.path.join(
         storage_base_path,
         rejected_filepath_relative)
+    if ensure_path_exists(rejected_filepath) is None:
+        print(
+            "ERROR: '" +
+            rejected_filepath +
+            "' couldn't be created for rejected files.")
+        return
 
     move_file(source, rejected_filepath)
 
