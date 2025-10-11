@@ -51,7 +51,7 @@ class ArchProc():
         """determines files on specific host in specific dir"""
         if self._remote_path_exists(host_ssh, directory):
             lines = (subprocess.check_output(["ssh", host_ssh, "find "
-                     + directory + "/ -type f -name \*"]))  # noqa: W605
+                     + directory + "/ -type f -name \\*"]))  # noqa: W605
             return lines
 
     def _archive_filebunch(self, filename):
